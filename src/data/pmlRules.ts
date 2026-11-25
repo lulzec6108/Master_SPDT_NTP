@@ -1,0 +1,340 @@
+import { PmlChecklistRule, QuestionnaireId } from '../types';
+
+export const QUESTIONNAIRE_LIST: {
+  id: QuestionnaireId;
+  shortName: string;
+  fullName: string;
+  color: string;
+  pagesInBuku6: string;
+}[] = [
+  { id: 'SPDT26-K', shortName: 'SPDT26-K', fullName: 'Konsumsi Rumah Tangga', color: '#003D7A', pagesInBuku6: 'Hal. 11–18' },
+  { id: 'SPDT26-TP', shortName: 'SPDT26-TP', fullName: 'Tanaman Pangan', color: '#15803D', pagesInBuku6: 'Hal. 19–27' },
+  { id: 'SPDT26-TH', shortName: 'SPDT26-TH', fullName: 'Tanaman Hortikultura', color: '#16A34A', pagesInBuku6: 'Hal. 28–37' },
+  { id: 'SPDT26-TPR', shortName: 'SPDT26-TPR', fullName: 'Tanaman Perkebunan Rakyat', color: '#B45309', pagesInBuku6: 'Hal. 38–46' },
+  { id: 'SPDT26-TRK', shortName: 'SPDT26-TRK', fullName: 'Peternakan', color: '#7C2D12', pagesInBuku6: 'Hal. 47–55' },
+  { id: 'SPDT26-IKT', shortName: 'SPDT26-IKT', fullName: 'Perikanan Tangkap', color: '#0284C7', pagesInBuku6: 'Hal. 56–63' },
+  { id: 'SPDT26-IKB', shortName: 'SPDT26-IKB', fullName: 'Perikanan Budidaya', color: '#0369A1', pagesInBuku6: 'Hal. 64–72' },
+  { id: 'SPDT26-HTN', shortName: 'SPDT26-HTN', fullName: 'Kehutanan', color: '#065F46', pagesInBuku6: 'Hal. 73–82' },
+];
+
+export const ROKOK_REFERENCE_CODES = [
+  {
+    code: '0141001',
+    type: 'SIGARET PUTIH MESIN (SPM)',
+    unit: 'BATANG',
+    examples: 'Marlboro Merah/Putih, Dunhill Putih, Lucky Strike, Camel Putih',
+    note: 'Gabungkan seluruh merek SPM menjadi 1 baris kode 0141001 dalam satuan BATANG.',
+  },
+  {
+    code: '0141002',
+    type: 'SIGARET KRETEK TANGAN (SKT)',
+    unit: 'BATANG',
+    examples: 'Dji Sam Soe 234, Sampoerna Hijau/Kretek, Djarum Coklat, Gudang Garam Merah',
+    note: 'Gabungkan seluruh merek SKT menjadi 1 baris kode 0141002 dalam satuan BATANG.',
+  },
+  {
+    code: '0141003',
+    type: 'SIGARET KRETEK MESIN (SKM)',
+    unit: 'BATANG',
+    examples: 'Gudang Garam Surya/International, Sampoerna Mild, Djarum Super, LA, Clas Mild',
+    note: 'Gabungkan seluruh merek SKM menjadi 1 baris kode 0141003 dalam satuan BATANG.',
+  },
+  {
+    code: '0141004',
+    type: 'SIGARET PUTIH TANGAN (SPT)',
+    unit: 'BATANG',
+    examples: 'Rokok putih linting tangan',
+    note: 'Gabungkan seluruh merek SPT menjadi 1 baris kode 0141004 dalam satuan BATANG.',
+  },
+];
+
+export const PRIMARY_CONSUMPTION_CHECKLIST = [
+  { id: 'p1', name: 'Beras (0111001)', group: 'Padi-padian (Blok V)', rule: 'Wajib ada konsumsi beras; jika tidak ada (misal makan sagu/jagung atau makan jadi penuh), wajib ada penjelasan di Blok III Catatan.' },
+  { id: 'p2', name: 'Sayur-sayuran (0117xxx)', group: 'Sayuran (Blok V)', rule: 'Rumah tangga yang memasak umumnya mengonsumsi sayuran segar (kangkung 0117001, bayam 0117002, daun singkong 0117007, terong 0117021, kacang panjang 0117023).' },
+  { id: 'p3', name: 'Ikan / Lauk Pauk (0113xxx / 0114xxx)', group: 'Ikan/Telur/Tahu/Tempe (Blok V)', rule: 'Cek keberadaan konsumsi ikan segar/asin, telur ayam ras (0114013), tempe kedelai (0117071), atau tahu mentah (0117072) selama seminggu terakhir.' },
+  { id: 'p4', name: 'Bumbu-bumbuan & Minyak (0115002, 0119032, 0117051-052)', group: 'Minyak & Bumbu (Blok V)', rule: 'Jika memasak, wajib terisi garam (0119032), minyak goreng (0115002), bawang merah (0117051), bawang putih (0117052), cabai (0117041/042), dan penyedap (0119027).' },
+  { id: 'p5', name: 'Bahan Bakar Memasak (0342001 / 0344002)', group: 'Bahan Bakar (Blok VI Sub 03.4)', rule: 'Wajib terisi Gas LPG (0342001), Kayu Bakar (0344002), atau Minyak Tanah (0343001) jika rumah tangga memasak di rumah.' },
+  { id: 'p6', name: 'Sabun Cuci & Cuci Piring (0461005 / 0461012)', group: 'Pemeliharaan RT (Blok VI Sub 04.6)', rule: 'Subkelompok 04.6 wajib ada isian pengeluaran selama sebulan/setahun (Sabun Detergen Bubuk 0461005 / Sabun Cair Cuci Piring 0461012).' },
+  { id: 'p7', name: 'Sabun Mandi (1112005)', group: 'Perawatan Pribadi (Blok VI Kelas 11.1.2)', rule: 'Sabun Mandi (1112005) pada Kelas 11.1.2 wajib terisi.' },
+  { id: 'p8', name: 'Pasta Gigi & Sikat Gigi (1112004 & 1112012)', group: 'Perawatan Pribadi (Blok VI Kelas 11.1.2)', rule: 'Pasta Gigi (1112004) dan/atau Sikat Gigi (1112012) pada Kelas 11.1.2 wajib terisi.' },
+];
+
+export const PML_CHECKLIST_RULES: PmlChecklistRule[] = [
+  // ================= SPDT26-K (Konsumsi) =================
+  {
+    id: 'k-b1-1',
+    questionnaire: 'SPDT26-K',
+    block: 'Blok I',
+    title: 'Kesesuaian Identitas Wilayah & DSRT',
+    description: 'Rincian 1 s.d. 7 wajib disalin sama persis dari SPDT26-DSRT. Jika Rincian 9 (Hasil Kunjungan) berkode 1, cek pengisian seluruh blok.',
+    referencePage: 'Buku 6 Hal. 11',
+    severity: 'WAJIB',
+  },
+  {
+    id: 'k-b1-2',
+    questionnaire: 'SPDT26-K',
+    block: 'Blok I',
+    title: 'Konsistensi Subsektor Rincian 11 dengan Dokumen Subsektor',
+    description: 'Subsektor yang dilingkari pada Rincian 11 harus sama dengan dokumen subsektor (TP/TH/TPR/TRK/IKT/IKB/HTN) yang dikumpulkan untuk NURT tersebut.',
+    referencePage: 'Buku 6 Hal. 11',
+    severity: 'KONSISTENSI',
+  },
+  {
+    id: 'k-b2-1',
+    questionnaire: 'SPDT26-K',
+    block: 'Blok II',
+    title: 'Kronologi Tanggal & Kode Petugas (3 Digit)',
+    description: 'Tanggal Pencacahan (Rincian 2) harus lebih awal atau sama dengan Tanggal Pemeriksaan (Rincian 5). Kode PCL & PML wajib 3 digit serta tanda tangan basah terisi.',
+    referencePage: 'Buku 6 Hal. 12',
+    severity: 'WAJIB',
+  },
+  {
+    id: 'k-b3-1',
+    questionnaire: 'SPDT26-K',
+    block: 'Blok III',
+    title: 'Catatan Penjelasan Komoditas Utama Kosong',
+    description: 'Wajib ada penjelasan di Blok III jika komoditas utama tidak terisi (Beras, Sabun Cuci, Sabun Mandi, Pasta Gigi, Sayuran, Ikan, Bumbu, Bahan Bakar Memasak).',
+    referencePage: 'Buku 6 Hal. 12',
+    severity: 'WAJIB',
+  },
+  {
+    id: 'k-b4-1',
+    questionnaire: 'SPDT26-K',
+    block: 'Blok IV',
+    title: 'Validasi KRT & Hubungan ART (Umur & Status Kawin)',
+    description: 'Baris 1 wajib KRT (Kode 1) umur > 10 tahun. Jika ada Pasangan (Kode 2), KRT & pasangan harus berstatus Kawin (Kode 2) dan berbeda jenis kelamin. Kode hubungan 6 (Orang tua/Mertua) umur > 20 tahun.',
+    referencePage: 'Buku 6 Hal. 13–14',
+    severity: 'KONSISTENSI',
+  },
+  {
+    id: 'k-b4-2',
+    questionnaire: 'SPDT26-K',
+    block: 'Blok IV',
+    title: 'Konsistensi Subsektor ART dengan Blok I Rincian 11',
+    description: 'Minimal 1 ART harus memiliki kode subsektor utama di Kolom (8). Semua kode subsektor di Blok IV Kolom (8) & (9) harus tercermin pada Blok I Rincian 11.',
+    referencePage: 'Buku 6 Hal. 14',
+    severity: 'KONSISTENSI',
+  },
+  {
+    id: 'k-b5-1',
+    questionnaire: 'SPDT26-K',
+    block: 'Blok V',
+    title: 'Penggabungan Komoditas Ganda & Rokok (SPM/SKT/SKM/SPT)',
+    description: 'Jika terdapat 2+ komoditas berkode 7 digit sama (termasuk berbagai merek rokok dalam jenis SPM 0141001, SKT 0141002, SKM 0141003, SPT 0141004 dalam satuan BATANG), gabungkan kuantitas & nilainya menjadi 1 baris.',
+    referencePage: 'Buku 6 Hal. 15',
+    severity: 'WAJIB',
+    crossCheckHint: 'Gunakan Kalkulator Gabung Komoditas & Rokok di tab sebelah untuk menghitung total otomatis.',
+  },
+  {
+    id: 'k-b5-2',
+    questionnaire: 'SPDT26-K',
+    block: 'Blok V',
+    title: 'Cek Kewajaran Kuantitas Makanan Per Kapita Seminggu',
+    description: 'Bandingkan Total Kuantitas (Kolom 19) dibagi jumlah ART. Contoh: Beras wajar ~1,5–2,5 kg/kapita/minggu. Pastikan Kolom 19 = Kolom 4 + Kolom 17 dan Kolom 20 = Kolom 5 + Kolom 18.',
+    referencePage: 'Buku 6 Hal. 15–16',
+    severity: 'KEWAJARAN',
+  },
+  {
+    id: 'k-b6-1',
+    questionnaire: 'SPDT26-K',
+    block: 'Blok VI',
+    title: 'Subkelompok Wajib Terisi (03.3, 03.4, 04.6, 11.1.2)',
+    description: 'Subkelompok 03.3 (Air), 03.4 (Listrik & Bahan Bakar), 04.6 (Sabun Cuci/Pemeliharaan RT), serta Kelas 11.1.2 (Sabun Mandi 1112005, Pasta Gigi 1112004, Sikat Gigi 1112012) WAJIB ada isian.',
+    referencePage: 'Buku 6 Hal. 17',
+    severity: 'WAJIB',
+  },
+  {
+    id: 'k-b6-2',
+    questionnaire: 'SPDT26-K',
+    block: 'Blok VI',
+    title: 'Uji Silang (Cross-Check) Antar Blok IV & Blok VI',
+    description: '1) Ada ART kode 8 (Pembantu) -> 0462001 Upah ART wajib isi. 2) Ada ART Perempuan > 10 th -> Cek 1112002 Pembalut, 1112011 Sampo, 1112006 Bedak, 1112009 Hand Body Lotion. 3) Ada biaya sekolah (09.1–09.3) -> Cek 08.6 (Alat tulis 0861/0864). 4) Beli kendaraan (06.1) -> Cek BBM (0622).',
+    referencePage: 'Buku 6 Hal. 17–18',
+    severity: 'KONSISTENSI',
+  },
+
+  // ================= SPDT26-TP (Tanaman Pangan) =================
+  {
+    id: 'tp-b1-1',
+    questionnaire: 'SPDT26-TP',
+    block: 'Blok I & III',
+    title: 'Kesesuaian NURT Pojok Kanan Atas Blok III',
+    description: 'NURT di pojok kanan atas halaman Blok III harus sama dengan Blok I Rincian 7. Nama KRT dan kode subsektor utama harus konsisten dengan SPDT26-K.',
+    referencePage: 'Buku 6 Hal. 19–22',
+    severity: 'WAJIB',
+  },
+  {
+    id: 'tp-b3-1',
+    questionnaire: 'SPDT26-TP',
+    block: 'Blok III',
+    title: 'Rumus Kewajaran Luas Panen <= Luas Tanam (Satuan M2)',
+    description: 'Kolom (7) Luas Panen TIDAK BOLEH lebih besar dari Kolom (5) Luas Tanam. Satuan luas wajib dalam Meter Persegi (M2) dan produksi dalam Kilogram (KG).',
+    referencePage: 'Buku 6 Hal. 22–23',
+    severity: 'KEWAJARAN',
+  },
+  {
+    id: 'tp-b3-2',
+    questionnaire: 'SPDT26-TP',
+    block: 'Blok III',
+    title: 'Keseimbangan Distribusi Produksi & Nilai Panen',
+    description: 'Total Produksi Kolom (8) = Dijual Kolom (10) + Dikonsumsi Sendiri Kolom (12) + Lainnya Kolom (13). Nilai per kg harus wajar sesuai harga petani setempat.',
+    referencePage: 'Buku 6 Hal. 23–24',
+    severity: 'KONSISTENSI',
+  },
+  {
+    id: 'tp-b4-1',
+    questionnaire: 'SPDT26-TP',
+    block: 'Blok III & IV',
+    title: 'Konsistensi Sistem Bagi Hasil (Kode 2 atau 3)',
+    description: 'Jika Blok III Kolom (3) Sistem Penguasaan Lahan berkode 2 atau 3 (Bagi Hasil), maka di Blok IV Rincian 2206018 (Biaya Bagi Hasil) WAJIB terisi nilai dan persentasenya di Kolom (2).',
+    referencePage: 'Buku 6 Hal. 25',
+    severity: 'KONSISTENSI',
+  },
+  {
+    id: 'tp-b4-2',
+    questionnaire: 'SPDT26-TP',
+    block: 'Blok IV',
+    title: 'Konsistensi Jumlah Jenis Bibit/Benih dengan Komoditas Blok III',
+    description: 'Banyaknya jenis bibit/benih tanaman pangan di Blok IV (Kelompok 2201–2202) harus <= jumlah jenis komoditas tanaman pangan yang diusahakan di Blok III.',
+    referencePage: 'Buku 6 Hal. 25–26',
+    severity: 'KONSISTENSI',
+  },
+
+  // ================= SPDT26-TH (Hortikultura) =================
+  {
+    id: 'th-b3-1',
+    questionnaire: 'SPDT26-TH',
+    block: 'Blok III',
+    title: 'Kesesuaian Satuan Tanam (M2 / Pohon / Rumpun) & Produksi',
+    description: 'Pastikan Satuan Tanam Kolom (4) sesuai Buku 5: Sayuran semusim menggunakan M2, Buah tahunan menggunakan POHON atau RUMPUN (Pisang, Nanas, Salak). Luas/Jumlah Panen <= Luas/Jumlah Tanam.',
+    referencePage: 'Buku 6 Hal. 31–33',
+    severity: 'WAJIB',
+  },
+  {
+    id: 'th-b3-2',
+    questionnaire: 'SPDT26-TH',
+    block: 'Blok III',
+    title: 'Persamaan Total Produksi = Dijual + Konsumsi + Lainnya',
+    description: 'Periksa Kolom (8) = Kolom (10) + Kolom (12) + Kolom (13). Jika ada tanaman menghasilkan berulang kali dalam setahun (misal cabai, kangkung), jumlahkan seluruh panen selama 1 tahun terakhir.',
+    referencePage: 'Buku 6 Hal. 33–34',
+    severity: 'KONSISTENSI',
+  },
+  {
+    id: 'th-b4-1',
+    questionnaire: 'SPDT26-TH',
+    block: 'Blok IV',
+    title: 'Kelengkapan Biaya Bibit, Pupuk, Mulsa & Upah Buruh TH',
+    description: 'Banyaknya jenis bibit di Blok IV <= komoditas Blok III. Jika Kolom (3) Blok III ada kode 2/3 (Bagi Hasil), rincian Biaya Bagi Hasil (3207015) di Blok IV wajib terisi beserta persentasenya.',
+    referencePage: 'Buku 6 Hal. 35–36',
+    severity: 'KONSISTENSI',
+  },
+
+  // ================= SPDT26-TPR (Perkebunan Rakyat) =================
+  {
+    id: 'tpr-b3-1',
+    questionnaire: 'SPDT26-TPR',
+    block: 'Blok III',
+    title: 'Validasi Jumlah Pohon/Luas Panen <= Jumlah Pohon/Luas Tanam',
+    description: 'Untuk Karet (4102010), Kelapa Sawit (4102012), Kopi (4102020), Lada (4102021), Kelapa (4102013): satuan tanam adalah POHON dan produksi dalam KG. Jumlah pohon menghasilkan/dipanen Kolom (7) <= jumlah pohon seluruhnya Kolom (5).',
+    referencePage: 'Buku 6 Hal. 41–42',
+    severity: 'WAJIB',
+  },
+  {
+    id: 'tpr-b3-2',
+    questionnaire: 'SPDT26-TPR',
+    block: 'Blok III',
+    title: 'Kewajaran Produksi & Harga TBS Sawit / Karet',
+    description: 'Pastikan produksi karet (4102010) dan kelapa sawit (4102012) sudah mencakup total panen selama setahun terakhir. Kolom (8) = Kolom (10) + Kolom (12) + Kolom (13).',
+    referencePage: 'Buku 6 Hal. 42–43',
+    severity: 'KEWAJARAN',
+  },
+  {
+    id: 'tpr-b4-1',
+    questionnaire: 'SPDT26-TPR',
+    block: 'Blok IV',
+    title: 'Kelengkapan Biaya Asam Semut/Cuka Getah, Pupuk, Herbisida & Alat Sadap/Panen',
+    description: 'Untuk petani karet: cek pengeluaran Asam Semut (4205014) / Cuka Getah (4205017), Pisau Sadap Karet (4207023), Mangkok Karet (4205008). Untuk petani sawit: cek pupuk (4202), herbisida (4203), Dodos Sawit (4207004), dan Egrek Sawit (4207006).',
+    referencePage: 'Buku 6 Hal. 44–45',
+    severity: 'KONSISTENSI',
+  },
+
+  // ================= SPDT26-TRK (Peternakan) =================
+  {
+    id: 'trk-b3-1',
+    questionnaire: 'SPDT26-TRK',
+    block: 'Blok III',
+    title: 'Kesesuaian Satuan Ternak (Ekor) & Hasil Ternak (Kg/Butir/Liter)',
+    description: 'Ternak hidup dicatat sesuai satuan Buku 5 (EKOR), sedangkan hasil ternak dicatat pada Kelompok 5106 sesuai satuan di Buku 5.',
+    referencePage: 'Buku 6 Hal. 50–52',
+    severity: 'WAJIB',
+  },
+  {
+    id: 'trk-b4-1',
+    questionnaire: 'SPDT26-TRK',
+    block: 'Blok IV',
+    title: 'Konsistensi Pakan, Bibit/Bakalan (DOC/DOD) & Obat Ternak',
+    description: 'Pastikan biaya pakan (Kelompok 5202–5203), obat/vaksin (5204), dan pembelian bibit/bakalan (5201) tercatat lengkap sesuai jenis ternak di Blok III.',
+    referencePage: 'Buku 6 Hal. 53–54',
+    severity: 'KONSISTENSI',
+  },
+
+  // ================= SPDT26-IKT (Perikanan Tangkap) =================
+  {
+    id: 'ikt-b3-1',
+    questionnaire: 'SPDT26-IKT',
+    block: 'Blok III',
+    title: 'Klasifikasi Tangkap Perairan Umum/Darat (6101) vs Laut (6102)',
+    description: 'Untuk penangkapan di sungai/danau/waduk, gunakan kode kelompok 6101 (Penangkapan Ikan di Perairan Umum: Gabus 6101007, Toman 6101028, Baung 6101001, Lais 6101013, Jelawat 6101011). Total produksi = Dijual + Konsumsi + Lainnya.',
+    referencePage: 'Buku 6 Hal. 58–60',
+    severity: 'WAJIB',
+  },
+  {
+    id: 'ikt-b4-1',
+    questionnaire: 'SPDT26-IKT',
+    block: 'Blok IV',
+    title: 'Kelengkapan Biaya BBM Perahu, Es/Garam, Umpan & Alat Tangkap',
+    description: 'Jika menggunakan perahu bermotor, wajib cek pengeluaran BBM (Solar 6201001 / Bensin 6201002) & Oli (6201004) di Blok IV, serta pengeluaran jaring/pancing/bubu (6203) dan es batu (6201008).',
+    referencePage: 'Buku 6 Hal. 61–62',
+    severity: 'KONSISTENSI',
+  },
+
+  // ================= SPDT26-IKB (Perikanan Budidaya) =================
+  {
+    id: 'ikb-b3-1',
+    questionnaire: 'SPDT26-IKB',
+    block: 'Blok III',
+    title: 'Kesesuaian Satuan Ikan Air Tawar (KG) vs Ikan Hias (EKOR)',
+    description: 'Ikan budidaya air tawar (7103: Nila 7103020, Mas 7103017, Lele 7103016, Patin 7103022, Toman 7103028) dicatat dalam KG, sedangkan Ikan Hias (7104: Arwana 7104004, Koi 7104021) dicatat dalam EKOR.',
+    referencePage: 'Buku 6 Hal. 67–69',
+    severity: 'WAJIB',
+  },
+  {
+    id: 'ikb-b4-1',
+    questionnaire: 'SPDT26-IKB',
+    block: 'Blok IV',
+    title: 'Konsistensi Bibit Ikan, Pakan Buatan/Alami & Peralatan Kolam/Keramba',
+    description: 'Banyaknya jenis bibit ikan (7201–7204) di Blok IV <= jenis ikan yang dibudidayakan di Blok III. Cek pengeluaran pakan buatan/alami (7206) dan peralatan (7210).',
+    referencePage: 'Buku 6 Hal. 70–71',
+    severity: 'KONSISTENSI',
+  },
+
+  // ================= SPDT26-HTN (Kehutanan) =================
+  {
+    id: 'htn-b3-1',
+    questionnaire: 'SPDT26-HTN',
+    block: 'Blok III',
+    title: 'Kesesuaian Satuan Kayu (M3) & Hasil Hutan Bukan Kayu (KG/Liter/Batang)',
+    description: 'Kayu budidaya/nonbudidaya (8101/8102) sesuai satuan Buku 5 (M3/KG/BATANG), Penangkapan Satwa/Tanaman (8103), dan Pemungutan Hasil Hutan (8104: Madu 8104016, Rotan 8104019, Damar 8104004, Gaharu 8104009). Total Produksi = Dijual + Konsumsi + Lainnya.',
+    referencePage: 'Buku 6 Hal. 76–78',
+    severity: 'WAJIB',
+  },
+  {
+    id: 'htn-b4-1',
+    questionnaire: 'SPDT26-HTN',
+    block: 'Blok IV',
+    title: 'Kelengkapan Biaya BBM Chainsaw, Alat Tebang & Upah Kehutanan',
+    description: 'Cek pengeluaran bensin/solar/pelumas (8206), gergaji mesin/chainsaw (8209010), parang/kapak (8209), dan upah tebang/angkut (8208).',
+    referencePage: 'Buku 6 Hal. 79–81',
+    severity: 'KONSISTENSI',
+  },
+];

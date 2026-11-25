@@ -1,6 +1,6 @@
 {
-  "name": "",
-  "description": "",
+  "name": "SPDT NTP 2026 - Portal Master Komoditas & Asisten PML BPS",
+  "description": "Platform database pencarian Master Komoditas (Buku 5), Direktori Kode Petugas Lapangan, dan Asisten Pemeriksaan Dokumen PML (Buku 6) untuk kegiatan SPDT NTP 2026 BPS.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
