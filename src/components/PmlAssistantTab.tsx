@@ -209,7 +209,7 @@ export const PmlAssistantTab: React.FC<PmlAssistantTabProps> = ({
           </div>
 
           <a
-            href="/assets/aistudio/Buku_6_Pedoman_Pemeriksaan_SPDT_NTP_2026_bff80b8e.pdf"
+            href="./assets/aistudio/Buku_6_Pedoman_Pemeriksaan_SPDT_NTP_2026_bff80b8e.pdf"
             target="_blank"
             rel="noopener noreferrer"
             className="text-xs font-semibold text-[#64748B] transition hover:text-[#003D7A] dark:text-[#94A3B8] dark:hover:text-[#38BDF8]"
@@ -623,13 +623,13 @@ export const PmlAssistantTab: React.FC<PmlAssistantTabProps> = ({
       {activeTool === 'CHECKLIST' && (
         <div className="rounded-lg border border-[#E2E8F0] bg-white p-5 sm:p-6 dark:border-[#1E293B] dark:bg-[#111827]">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E2E8F0] pb-3.5 dark:border-[#1E293B]">
-            <div className="flex gap-1 overflow-x-auto pb-1">
+            <div className="flex flex-wrap gap-1.5">
               {QUESTIONNAIRE_LIST.map((q) => (
                 <button
                   key={q.id}
                   type="button"
                   onClick={() => setSelectedDoc(q.id)}
-                  className={`h-8 shrink-0 rounded px-3 text-xs font-semibold whitespace-nowrap transition ${
+                  className={`h-8 rounded px-3 text-xs font-semibold whitespace-nowrap transition ${
                     selectedDoc === q.id
                       ? 'bg-[#003D7A] text-white dark:bg-[#0284C7]'
                       : 'bg-[#F8FAFC] text-[#64748B] hover:text-[#0F172A] dark:bg-[#0F172A] dark:text-[#94A3B8] dark:hover:text-[#F8FAFC]'

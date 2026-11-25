@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { CommodityItem, OfficerItem, QuestionnaireId } from './types';
+import { CommodityItem, OfficerItem, QuestionnaireId, SectorId } from './types';
 import { INITIAL_COMMODITIES } from './data/commodities';
 import { INITIAL_OFFICERS } from './data/officers';
 import { PML_CHECKLIST_RULES } from './data/pmlRules';
 import { LoadingScreen } from './components/LoadingScreen';
-import { CommodityTab } from './components/CommodityTab';
+import { CommodityTab, FilterGroup, SECTOR_FILTERS } from './components/CommodityTab';
 import { OfficerTab } from './components/OfficerTab';
 import { LocalAssistantTab } from './components/LocalAssistantTab';
 import { PmlAssistantTab } from './components/PmlAssistantTab';
@@ -24,6 +24,9 @@ type ActiveTab = 'COMMODITIES' | 'OFFICERS' | 'ASSISTANT' | 'PML_TOOLS';
 export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<ActiveTab>('COMMODITIES');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [selectedSector, setSelectedSector] = useState<SectorId>('ALL');
+  const [selectedGroup, setSelectedGroup] = useState<FilterGroup>('ALL');
 
   // Dual Theme: Light & Dark Mode
   const [isDark, setIsDark] = useState<boolean>(() => {
@@ -366,20 +369,51 @@ export default function App() {
     );
   }
 
-  const navItems: { id: ActiveTab; label: string }[] = [
-    { id: 'COMMODITIES', label: 'Master Komoditas' },
-    { id: 'OFFICERS', label: 'Kode Petugas' },
+  const navItems: { id: ActiveTab; label: string; badge?: string }[] = [
+    { id: 'COMMODITIES', label: 'Master Komoditas', badge: commodities.length.toLocaleString('id-ID') },
+    { id: 'OFFICERS', label: 'Kode Petugas', badge: String(officers.length) },
     { id: 'ASSISTANT', label: 'Asisten Lokal' },
     { id: 'PML_TOOLS', label: 'Kalkulator PML' },
+  ];
+
+  const groupFilters: { id: FilterGroup; label: string }[] = [
+    { id: 'ALL', label: 'Semua Kategori' },
+    { id: 'KONSUMSI', label: 'Konsumsi RT' },
+    { id: 'PRODUKSI', label: 'Produksi' },
+    { id: 'BIAYA_PRODUKSI', label: 'Biaya Produksi' },
+    { id: 'FAVORITES', label: `Tersimpan (★ ${favorites.length})` },
   ];
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] pb-24 text-[#0F172A] transition-colors md:pb-14 dark:bg-[#0B0F19] dark:text-[#F1F5F9]">
       {/* Sticky Top Header (Height: 57px, matches sticky top-[57px] filter bars) */}
-      <header className="sticky top-0 z-30 h-[57px] border-b border-[#E2E8F0] bg-white/95 backdrop-blur-xs dark:border-[#1E293B] dark:bg-[#111827]/95">
-        <div className="mx-auto flex h-full max-w-6xl items-center justify-between gap-6 px-5 sm:px-8">
-          {/* Zone 1: Brand Mark with Custom SPDT Balance Scale / Neraca Logo */}
-          <div className="flex items-center gap-3 shrink-0">
+      <header className="sticky top-0 z-40 h-[57px] border-b border-[#E2E8F0] bg-white/95 backdrop-blur-xs dark:border-[#1E293B] dark:bg-[#111827]/95">
+        <div className="mx-auto flex h-full max-w-6xl items-center justify-between gap-4 px-4 sm:px-8">
+          {/* Zone 1: Burger Button + Brand Mark with Custom SPDT Balance Scale / Neraca Logo */}
+          <div className="flex items-center gap-2.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => setIsSidebarOpen((prev) => !prev)}
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md border transition ${
+                isSidebarOpen
+                  ? 'border-[#003D7A] bg-[#003D7A] text-white dark:border-[#0284C7] dark:bg-[#0284C7]'
+                  : 'border-[#E2E8F0] bg-[#F8FAFC] text-[#334155] hover:border-[#CBD5E1] hover:bg-white hover:text-[#0F172A] dark:border-[#334155] dark:bg-[#1E293B] dark:text-[#CBD5E1] dark:hover:text-white'
+              }`}
+              aria-label={isSidebarOpen ? 'Tutup Sidebar Navigasi' : 'Buka Sidebar Navigasi'}
+              aria-expanded={isSidebarOpen}
+              title={isSidebarOpen ? 'Sembunyikan Sidebar' : 'Tampilkan Sidebar Navigasi & Filter'}
+            >
+              {isSidebarOpen ? (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                  <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                  <path d="M4 6h16M4 12h16M4 18h16" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
+            </button>
+
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[#002D5A] bg-[#003D7A] dark:border-[#1E3A8A] dark:bg-[#0F2952]">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path
@@ -490,14 +524,14 @@ export default function App() {
                     <circle cx="12" cy="12" r="4" />
                     <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" strokeLinecap="round" />
                   </svg>
-                  <span>Terang</span>
+                  <span className="hidden sm:inline">Terang</span>
                 </>
               ) : (
                 <>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" strokeLinejoin="round" />
                   </svg>
-                  <span>Gelap</span>
+                  <span className="hidden sm:inline">Gelap</span>
                 </>
               )}
             </button>
@@ -505,66 +539,239 @@ export default function App() {
         </div>
       </header>
 
-      {/* Main Content Workspace */}
-      <main className="mx-auto max-w-6xl px-5 pb-8 sm:px-8">
-        {activeTab === 'COMMODITIES' && (
-          <CommodityTab
-            commodities={commodities}
-            favorites={favorites}
-            onToggleFavorite={handleToggleFavorite}
-            onCopyCode={handleCopyCode}
-            isAdmin={isAdmin}
-            onOpenAddCommodity={() => {
-              setEditingCommodity(null);
-              setAdminModalMode('COMMODITY_FORM');
-              setAdminModalOpen(true);
-            }}
-            onOpenEditCommodity={(item) => {
-              setEditingCommodity(item);
-              setAdminModalMode('COMMODITY_FORM');
-              setAdminModalOpen(true);
-            }}
-            onDeleteCommodity={handleDeleteCommodity}
-          />
+      {/* Hide & Show Sidebar Drawer + Backdrop */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 top-[57px] z-30 bg-slate-950/35 backdrop-blur-[1px] lg:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      <div className="mx-auto flex max-w-6xl">
+        {/* Responsive Hide & Show Sidebar */}
+        {isSidebarOpen && (
+          <aside
+            className="fixed top-[57px] bottom-0 left-0 z-40 w-72 overflow-y-auto border-r border-[#E2E8F0] bg-white p-4 shadow-xl lg:sticky lg:top-[57px] lg:z-20 lg:h-[calc(100vh-57px)] lg:w-64 lg:shrink-0 lg:shadow-none dark:border-[#1E293B] dark:bg-[#111827]"
+            aria-label="Menu Sidebar Navigasi & Filter"
+          >
+            <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-3 dark:border-[#1E293B]">
+              <span className="text-xs font-bold tracking-wider uppercase text-[#64748B] dark:text-[#94A3B8]">
+                Navigasi & Filter
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsSidebarOpen(false)}
+                className="rounded px-2 py-0.5 text-xs font-semibold text-[#64748B] hover:bg-[#F1F5F9] hover:text-[#0F172A] dark:text-[#94A3B8] dark:hover:bg-[#1E293B] dark:hover:text-white"
+              >
+                Tutup
+              </button>
+            </div>
+
+            {/* Section 1: Main Navigation Tabs */}
+            <div className="mt-4">
+              <div className="px-2 text-[11px] font-bold tracking-wider uppercase text-[#94A3B8] dark:text-[#64748B]">
+                Menu Utama
+              </div>
+              <div className="mt-1.5 space-y-1">
+                {navItems.map((item) => {
+                  const active = activeTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => {
+                        setActiveTab(item.id);
+                        if (window.innerWidth < 1024) setIsSidebarOpen(false);
+                      }}
+                      className={`flex w-full items-center justify-between rounded-md px-2.5 py-2 text-left text-xs font-semibold transition ${
+                        active
+                          ? 'bg-[#003D7A] text-white dark:bg-[#0284C7]'
+                          : 'text-[#334155] hover:bg-[#F1F5F9] dark:text-[#CBD5E1] dark:hover:bg-[#1E293B]'
+                      }`}
+                    >
+                      <span>{item.label}</span>
+                      {item.badge && (
+                        <span
+                          className={`tabular-code rounded px-1.5 py-0.5 text-[10px] font-bold ${
+                            active
+                              ? 'bg-white/20 text-white'
+                              : 'bg-[#F1F5F9] text-[#64748B] dark:bg-[#1E293B] dark:text-[#94A3B8]'
+                          }`}
+                        >
+                          {item.badge}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Section 2: Quick Subsektor Filter (Buku 5) */}
+            <div className="mt-5 border-t border-[#E2E8F0] pt-4 dark:border-[#1E293B]">
+              <div className="px-2 text-[11px] font-bold tracking-wider uppercase text-[#94A3B8] dark:text-[#64748B]">
+                Subsektor Buku 5
+              </div>
+              <div className="mt-1.5 space-y-1">
+                {SECTOR_FILTERS.map((sf) => {
+                  const active = activeTab === 'COMMODITIES' && selectedSector === sf.id;
+                  return (
+                    <button
+                      key={sf.id}
+                      type="button"
+                      onClick={() => {
+                        setActiveTab('COMMODITIES');
+                        setSelectedSector(sf.id);
+                        if (window.innerWidth < 1024) setIsSidebarOpen(false);
+                      }}
+                      className={`flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left text-xs font-semibold transition ${
+                        active
+                          ? 'bg-[#EFF6FF] text-[#003D7A] dark:bg-[#1E3A8A]/40 dark:text-[#38BDF8]'
+                          : 'text-[#475569] hover:bg-[#F8FAFC] hover:text-[#0F172A] dark:text-[#94A3B8] dark:hover:bg-[#1E293B] dark:hover:text-[#F8FAFC]'
+                      }`}
+                    >
+                      <span>{sf.label}</span>
+                      <span className="tabular-code text-[11px] text-[#64748B] dark:text-[#64748B]">
+                        {sf.codePrefix}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Section 3: Quick Kategori Filter */}
+            <div className="mt-5 border-t border-[#E2E8F0] pt-4 dark:border-[#1E293B]">
+              <div className="px-2 text-[11px] font-bold tracking-wider uppercase text-[#94A3B8] dark:text-[#64748B]">
+                Kategori Komoditas
+              </div>
+              <div className="mt-1.5 space-y-1">
+                {groupFilters.map((gf) => {
+                  const active = activeTab === 'COMMODITIES' && selectedGroup === gf.id;
+                  return (
+                    <button
+                      key={gf.id}
+                      type="button"
+                      onClick={() => {
+                        setActiveTab('COMMODITIES');
+                        setSelectedGroup(gf.id);
+                        if (window.innerWidth < 1024) setIsSidebarOpen(false);
+                      }}
+                      className={`flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left text-xs font-semibold transition ${
+                        active
+                          ? 'bg-[#EFF6FF] text-[#003D7A] dark:bg-[#1E3A8A]/40 dark:text-[#38BDF8]'
+                          : 'text-[#475569] hover:bg-[#F8FAFC] hover:text-[#0F172A] dark:text-[#94A3B8] dark:hover:bg-[#1E293B] dark:hover:text-[#F8FAFC]'
+                      }`}
+                    >
+                      <span>{gf.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Section 4: Dokumen Pedoman PDF */}
+            <div className="mt-5 border-t border-[#E2E8F0] pt-4 dark:border-[#1E293B]">
+              <div className="px-2 text-[11px] font-bold tracking-wider uppercase text-[#94A3B8] dark:text-[#64748B]">
+                Dokumen Pedoman (PDF)
+              </div>
+              <div className="mt-1.5 space-y-1 text-xs">
+                <a
+                  href="./assets/aistudio/Buku_5_Master_Komoditas_SPDT_NTP_2026_089343c2.pdf"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block rounded-md px-2.5 py-1.5 font-medium text-[#475569] hover:bg-[#F8FAFC] hover:text-[#003D7A] dark:text-[#94A3B8] dark:hover:bg-[#1E293B] dark:hover:text-[#38BDF8]"
+                >
+                  Buku 5 Master Komoditas ↗
+                </a>
+                <a
+                  href="./assets/aistudio/Buku_6_Pedoman_Pemeriksaan_PML_SPDT_NTP_2026_87f14b4f.pdf"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block rounded-md px-2.5 py-1.5 font-medium text-[#475569] hover:bg-[#F8FAFC] hover:text-[#003D7A] dark:text-[#94A3B8] dark:hover:bg-[#1E293B] dark:hover:text-[#38BDF8]"
+                >
+                  Buku 6 Pedoman PML ↗
+                </a>
+                <a
+                  href="./assets/aistudio/kode_petugas__1__79773466.pdf"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block rounded-md px-2.5 py-1.5 font-medium text-[#475569] hover:bg-[#F8FAFC] hover:text-[#003D7A] dark:text-[#94A3B8] dark:hover:bg-[#1E293B] dark:hover:text-[#38BDF8]"
+                >
+                  Daftar Kode Petugas ↗
+                </a>
+              </div>
+            </div>
+          </aside>
         )}
 
-        {activeTab === 'OFFICERS' && (
-          <OfficerTab
-            officers={officers}
-            onCopyCode={handleCopyCode}
-            isAdmin={isAdmin}
-            onOpenAddOfficer={() => {
-              setEditingOfficer(null);
-              setAdminModalMode('OFFICER_FORM');
-              setAdminModalOpen(true);
-            }}
-            onOpenEditOfficer={(item) => {
-              setEditingOfficer(item);
-              setAdminModalMode('OFFICER_FORM');
-              setAdminModalOpen(true);
-            }}
-            onDeleteOfficer={handleDeleteOfficer}
-            onImportOfficersCsv={handleImportOfficersCsv}
-          />
-        )}
+        {/* Main Content Workspace */}
+        <main className="min-w-0 flex-1 px-4 pb-8 sm:px-8">
+          {activeTab === 'COMMODITIES' && (
+            <CommodityTab
+              commodities={commodities}
+              favorites={favorites}
+              onToggleFavorite={handleToggleFavorite}
+              onCopyCode={handleCopyCode}
+              isAdmin={isAdmin}
+              onOpenAddCommodity={() => {
+                setEditingCommodity(null);
+                setAdminModalMode('COMMODITY_FORM');
+                setAdminModalOpen(true);
+              }}
+              onOpenEditCommodity={(item) => {
+                setEditingCommodity(item);
+                setAdminModalMode('COMMODITY_FORM');
+                setAdminModalOpen(true);
+              }}
+              onDeleteCommodity={handleDeleteCommodity}
+              selectedSector={selectedSector}
+              onSelectSector={setSelectedSector}
+              selectedGroup={selectedGroup}
+              onSelectGroup={setSelectedGroup}
+              onOpenSidebar={() => setIsSidebarOpen(true)}
+            />
+          )}
 
-        {activeTab === 'ASSISTANT' && (
-          <LocalAssistantTab
-            commodities={commodities}
-            officers={officers}
-            onCopyCode={handleCopyCode}
-          />
-        )}
+          {activeTab === 'OFFICERS' && (
+            <OfficerTab
+              officers={officers}
+              onCopyCode={handleCopyCode}
+              isAdmin={isAdmin}
+              onOpenAddOfficer={() => {
+                setEditingOfficer(null);
+                setAdminModalMode('OFFICER_FORM');
+                setAdminModalOpen(true);
+              }}
+              onOpenEditOfficer={(item) => {
+                setEditingOfficer(item);
+                setAdminModalMode('OFFICER_FORM');
+                setAdminModalOpen(true);
+              }}
+              onDeleteOfficer={handleDeleteOfficer}
+              onImportOfficersCsv={handleImportOfficersCsv}
+            />
+          )}
 
-        {activeTab === 'PML_TOOLS' && (
-          <PmlAssistantTab
-            checkedRuleIds={checkedRuleIds}
-            onToggleRule={handleToggleRule}
-            onResetChecklist={handleResetChecklist}
-            onCopyText={handleCopyCode}
-          />
-        )}
-      </main>
+          {activeTab === 'ASSISTANT' && (
+            <LocalAssistantTab
+              commodities={commodities}
+              officers={officers}
+              onCopyCode={handleCopyCode}
+            />
+          )}
+
+          {activeTab === 'PML_TOOLS' && (
+            <PmlAssistantTab
+              checkedRuleIds={checkedRuleIds}
+              onToggleRule={handleToggleRule}
+              onResetChecklist={handleResetChecklist}
+              onCopyText={handleCopyCode}
+            />
+          )}
+        </main>
+      </div>
 
       {/* Mobile Bottom Navigation */}
       <nav

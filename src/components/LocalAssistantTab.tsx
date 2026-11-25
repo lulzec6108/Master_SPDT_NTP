@@ -247,7 +247,7 @@ export const LocalAssistantTab: React.FC<LocalAssistantTabProps> = ({
             )}
           </div>
 
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             {[
               { label: 'Sigaret Kretek Mesin (SKM)', q: '0141003' },
               { label: 'Sigaret Putih Mesin (SPM)', q: '0141001' },
@@ -261,7 +261,7 @@ export const LocalAssistantTab: React.FC<LocalAssistantTabProps> = ({
                 key={chip.label}
                 type="button"
                 onClick={() => setQuery(chip.q)}
-                className="h-7 shrink-0 rounded border border-[#E2E8F0] bg-white px-2.5 text-xs font-semibold whitespace-nowrap text-[#475569] transition hover:border-[#CBD5E1] hover:text-[#0F172A] dark:border-[#1E293B] dark:bg-[#111827] dark:text-[#94A3B8] dark:hover:border-[#334155] dark:hover:text-[#F8FAFC]"
+                className="h-7 rounded border border-[#E2E8F0] bg-white px-2.5 text-xs font-semibold whitespace-nowrap text-[#475569] transition hover:border-[#CBD5E1] hover:text-[#0F172A] dark:border-[#1E293B] dark:bg-[#111827] dark:text-[#94A3B8] dark:hover:border-[#334155] dark:hover:text-[#F8FAFC]"
               >
                 {chip.label}
               </button>

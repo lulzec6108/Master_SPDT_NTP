@@ -149,7 +149,7 @@ export const OfficerTab: React.FC<OfficerTabProps> = ({
           <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
             <div className="flex items-center gap-3 font-semibold text-[#64748B] dark:text-[#94A3B8]">
               <a
-                href="/assets/aistudio/kode_petugas__1__79773466.pdf"
+                href="./assets/aistudio/kode_petugas__1__79773466.pdf"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="transition hover:text-[#003D7A] dark:hover:text-[#38BDF8]"

@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { CategoryType, CommodityItem, SectorId } from '../types';
 
+export type FilterGroup = 'ALL' | CategoryType | 'FAVORITES';
+
 interface CommodityTabProps {
   commodities: CommodityItem[];
   favorites: string[];
@@ -10,20 +12,23 @@ interface CommodityTabProps {
   onOpenAddCommodity: () => void;
   onOpenEditCommodity: (item: CommodityItem) => void;
   onDeleteCommodity: (code: string) => void;
+  selectedSector: SectorId;
+  onSelectSector: (sector: SectorId) => void;
+  selectedGroup: FilterGroup;
+  onSelectGroup: (group: FilterGroup) => void;
+  onOpenSidebar: () => void;
 }
 
-type FilterGroup = 'ALL' | CategoryType | 'FAVORITES';
-
-const SECTOR_FILTERS: { id: SectorId; codePrefix: string; label: string }[] = [
-  { id: 'ALL', codePrefix: '01–82', label: 'Semua Sektor' },
-  { id: '1_KONSUMSI', codePrefix: '01–11', label: 'Konsumsi' },
-  { id: '2_TP', codePrefix: '21–22', label: 'Tanaman Pangan' },
-  { id: '3_TH', codePrefix: '31–32', label: 'Hortikultura' },
-  { id: '4_TPR', codePrefix: '41–42', label: 'Perkebunan' },
-  { id: '5_TRK', codePrefix: '51–52', label: 'Peternakan' },
-  { id: '6_IKT', codePrefix: '61–62', label: 'Perikanan Tangkap' },
-  { id: '7_IKB', codePrefix: '71–72', label: 'Perikanan Budidaya' },
-  { id: '8_HTN', codePrefix: '81–82', label: 'Kehutanan' },
+export const SECTOR_FILTERS: { id: SectorId; codePrefix: string; label: string; shortLabel: string }[] = [
+  { id: 'ALL', codePrefix: '01–82', label: 'Semua Sektor', shortLabel: 'Semua' },
+  { id: '1_KONSUMSI', codePrefix: '01–11', label: 'Konsumsi RT', shortLabel: 'Konsumsi' },
+  { id: '2_TP', codePrefix: '21–22', label: 'Tanaman Pangan', shortLabel: 'Pangan' },
+  { id: '3_TH', codePrefix: '31–32', label: 'Hortikultura', shortLabel: 'Horti' },
+  { id: '4_TPR', codePrefix: '41–42', label: 'Perkebunan', shortLabel: 'Kebun' },
+  { id: '5_TRK', codePrefix: '51–52', label: 'Peternakan', shortLabel: 'Ternak' },
+  { id: '6_IKT', codePrefix: '61–62', label: 'Perikanan Tangkap', shortLabel: 'Tangkap' },
+  { id: '7_IKB', codePrefix: '71–72', label: 'Perikanan Budidaya', shortLabel: 'Budidaya' },
+  { id: '8_HTN', codePrefix: '81–82', label: 'Kehutanan', shortLabel: 'Hutan' },
 ];
 
 export const CommodityTab: React.FC<CommodityTabProps> = ({
@@ -35,13 +40,17 @@ export const CommodityTab: React.FC<CommodityTabProps> = ({
   onOpenAddCommodity,
   onOpenEditCommodity,
   onDeleteCommodity,
+  selectedSector,
+  onSelectSector,
+  selectedGroup,
+  onSelectGroup,
+  onOpenSidebar,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedSector, setSelectedSector] = useState<SectorId>('ALL');
-  const [selectedGroup, setSelectedGroup] = useState<FilterGroup>('ALL');
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [expandedCode, setExpandedCode] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(150);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   const filteredCommodities = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -74,22 +83,24 @@ export const CommodityTab: React.FC<CommodityTabProps> = ({
   };
 
   const handleSectorClick = (id: SectorId) => {
-    setSelectedSector(id);
+    onSelectSector(id);
     setVisibleCount(150);
   };
 
   const handleGroupClick = (grp: FilterGroup) => {
-    setSelectedGroup(grp);
+    onSelectGroup(grp);
     setVisibleCount(150);
   };
 
+  const activeSectorObj = SECTOR_FILTERS.find((s) => s.id === selectedSector) || SECTOR_FILTERS[0];
+
   return (
     <div>
-      {/* STICKY SEARCH & FILTER WORKSPACE BAR */}
-      <div className="sticky top-[57px] z-20 -mx-5 border-b border-[#E2E8F0] bg-[#F8FAFC]/95 px-5 py-3.5 backdrop-blur-xs sm:-mx-8 sm:px-8 dark:border-[#1E293B] dark:bg-[#0B0F19]/95">
-        <div className="mx-auto max-w-6xl space-y-3">
-          {/* Search Input Row */}
-          <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+      {/* STICKY SEARCH & ADAPTIVE FLEX-WRAP FILTER BAR (ZERO HORIZONTAL SCROLLBARS) */}
+      <div className="sticky top-[57px] z-20 -mx-4 border-b border-[#E2E8F0] bg-[#F8FAFC]/95 px-4 py-3 backdrop-blur-xs sm:-mx-6 sm:px-6 dark:border-[#1E293B] dark:bg-[#0B0F19]/95">
+        <div className="space-y-2.5">
+          {/* Row 1: Search Input + Category Filter / Adaptive Mobile Filter Trigger */}
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
             <div className="relative flex-1">
               <svg
                 className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-[#64748B] dark:text-[#94A3B8]"
@@ -109,7 +120,7 @@ export const CommodityTab: React.FC<CommodityTabProps> = ({
                   setSearchQuery(e.target.value);
                   setVisibleCount(150);
                 }}
-                placeholder="Cari kode 7 digit atau uraian komoditas Buku 5 (contoh: 0111001, beras, karet, pupuk)..."
+                placeholder="Cari kode 7 digit atau uraian komoditas Buku 5 (contoh: 0111001, beras, karet)..."
                 className="h-10 w-full rounded-md border border-[#CBD5E1] bg-white pr-28 pl-10 text-sm font-medium text-[#0F172A] placeholder:text-[#94A3B8] transition focus:border-[#003D7A] focus:outline-none dark:border-[#334155] dark:bg-[#111827] dark:text-[#F8FAFC] dark:placeholder:text-[#64748B] dark:focus:border-[#38BDF8]"
               />
               <div className="absolute top-1/2 right-2.5 flex -translate-y-1/2 items-center gap-2">
@@ -126,21 +137,22 @@ export const CommodityTab: React.FC<CommodityTabProps> = ({
                   </button>
                 )}
                 <span className="tabular-code text-xs font-semibold text-[#64748B] dark:text-[#94A3B8]">
-                  {filteredCommodities.length.toLocaleString('id-ID')} item
+                  {filteredCommodities.length.toLocaleString('id-ID')}
                 </span>
               </div>
             </div>
 
-            <div className="flex items-center justify-between gap-2 sm:justify-end">
-              {/* Segmented Category Filter */}
-              <div className="flex items-center rounded-md border border-[#E2E8F0] bg-white p-0.5 dark:border-[#1E293B] dark:bg-[#111827]">
+            {/* Adaptive Small-Screen Summary Bar + Desktop Category Segmented Control */}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              {/* Flex-wrap Category Filter Buttons (Never scrolls horizontally) */}
+              <div className="flex flex-wrap items-center gap-1 rounded-md border border-[#E2E8F0] bg-white p-0.5 dark:border-[#1E293B] dark:bg-[#111827]">
                 {(
                   [
                     { id: 'ALL', label: 'Semua' },
                     { id: 'KONSUMSI', label: 'Konsumsi' },
                     { id: 'PRODUKSI', label: 'Produksi' },
                     { id: 'BIAYA_PRODUKSI', label: 'Biaya' },
-                    { id: 'FAVORITES', label: `Tersimpan (${favorites.length})` },
+                    { id: 'FAVORITES', label: `★ (${favorites.length})` },
                   ] as { id: FilterGroup; label: string }[]
                 ).map((grp) => {
                   const active = selectedGroup === grp.id;
@@ -149,9 +161,9 @@ export const CommodityTab: React.FC<CommodityTabProps> = ({
                       key={grp.id}
                       type="button"
                       onClick={() => handleGroupClick(grp.id)}
-                      className={`h-8 shrink-0 rounded px-2.5 text-xs font-semibold whitespace-nowrap transition ${
+                      className={`h-7 rounded px-2.5 text-xs font-semibold whitespace-nowrap transition ${
                         active
-                          ? 'bg-[#003D7A] text-white dark:bg-[#1E3A8A] dark:text-white'
+                          ? 'bg-[#003D7A] text-white dark:bg-[#0284C7] dark:text-white'
                           : 'text-[#64748B] hover:text-[#0F172A] dark:text-[#94A3B8] dark:hover:text-[#F8FAFC]'
                       }`}
                     >
@@ -161,11 +173,34 @@ export const CommodityTab: React.FC<CommodityTabProps> = ({
                 })}
               </div>
 
+              {/* Small-screen Sector Pill Toggle & Sidebar Trigger */}
+              <div className="flex items-center gap-1.5 sm:hidden">
+                <button
+                  type="button"
+                  onClick={() => setShowMobileFilters((prev) => !prev)}
+                  className="flex h-8 items-center gap-1.5 rounded-md border border-[#CBD5E1] bg-white px-2.5 text-xs font-semibold text-[#0F172A] dark:border-[#334155] dark:bg-[#111827] dark:text-[#F8FAFC]"
+                >
+                  <span className="tabular-code text-[#003D7A] dark:text-[#38BDF8]">
+                    {activeSectorObj.codePrefix}
+                  </span>
+                  <span>{activeSectorObj.shortLabel}</span>
+                  <span className="text-[10px] text-[#64748B]">{showMobileFilters ? '▲' : '▼'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={onOpenSidebar}
+                  className="flex h-8 items-center rounded-md border border-[#CBD5E1] bg-white px-2.5 text-xs font-semibold text-[#475569] dark:border-[#334155] dark:bg-[#111827] dark:text-[#94A3B8]"
+                  title="Buka Sidebar Filter"
+                >
+                  Menu
+                </button>
+              </div>
+
               {isAdmin && (
                 <button
                   type="button"
                   onClick={onOpenAddCommodity}
-                  className="h-9 shrink-0 rounded-md bg-[#003D7A] px-3 text-xs font-semibold whitespace-nowrap text-white hover:bg-[#002B57] dark:bg-[#0284C7] dark:hover:bg-[#0369A1]"
+                  className="h-8 rounded-md bg-[#003D7A] px-3 text-xs font-semibold whitespace-nowrap text-white hover:bg-[#002B57] dark:bg-[#0284C7] dark:hover:bg-[#0369A1]"
                 >
                   + Komoditas
                 </button>
@@ -173,20 +208,27 @@ export const CommodityTab: React.FC<CommodityTabProps> = ({
             </div>
           </div>
 
-          {/* Sector Filter Bar */}
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-1 overflow-x-auto pb-0.5">
+          {/* Row 2: Clean Flex-Wrap Sector Filter Bar (Always visible on >= sm, collapsible on mobile, ZERO scrollbar) */}
+          <div
+            className={`${
+              showMobileFilters ? 'flex' : 'hidden sm:flex'
+            } flex-wrap items-center justify-between gap-1.5 pt-0.5`}
+          >
+            <div className="flex flex-wrap items-center gap-1">
               {SECTOR_FILTERS.map((sec) => {
                 const active = selectedSector === sec.id;
                 return (
                   <button
                     key={sec.id}
                     type="button"
-                    onClick={() => handleSectorClick(sec.id)}
-                    className={`flex h-7 shrink-0 items-center gap-1.5 rounded px-2.5 text-xs font-semibold whitespace-nowrap transition ${
+                    onClick={() => {
+                      handleSectorClick(sec.id);
+                      setShowMobileFilters(false);
+                    }}
+                    className={`flex h-7 items-center gap-1.5 rounded px-2.5 text-xs font-semibold whitespace-nowrap transition ${
                       active
                         ? 'bg-[#0F172A] text-white dark:bg-[#F8FAFC] dark:text-[#0F172A]'
-                        : 'text-[#475569] hover:bg-[#E2E8F0]/70 hover:text-[#0F172A] dark:text-[#94A3B8] dark:hover:bg-[#1E293B] dark:hover:text-[#F8FAFC]'
+                        : 'border border-transparent bg-[#E2E8F0]/50 text-[#475569] hover:border-[#CBD5E1] hover:bg-white hover:text-[#0F172A] dark:bg-[#111827] dark:text-[#94A3B8] dark:hover:border-[#334155] dark:hover:text-[#F8FAFC]'
                     }`}
                   >
                     <span
@@ -205,12 +247,12 @@ export const CommodityTab: React.FC<CommodityTabProps> = ({
             </div>
 
             <a
-              href="/assets/aistudio/Buku_5_Master_Komoditas_SPDT_NTP_2026_089343c2.pdf"
+              href="./assets/aistudio/Buku_5_Master_Komoditas_SPDT_NTP_2026_089343c2.pdf"
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden shrink-0 text-xs font-semibold whitespace-nowrap text-[#64748B] transition hover:text-[#003D7A] lg:inline-block dark:text-[#94A3B8] dark:hover:text-[#38BDF8]"
+              className="hidden text-xs font-semibold whitespace-nowrap text-[#64748B] transition hover:text-[#003D7A] xl:inline-block dark:text-[#94A3B8] dark:hover:text-[#38BDF8]"
             >
-              Dokumen Buku 5 (PDF) ↗
+              Buku 5 (PDF) ↗
             </a>
           </div>
         </div>
@@ -224,7 +266,7 @@ export const CommodityTab: React.FC<CommodityTabProps> = ({
               Tidak ditemukan komoditas yang sesuai
             </p>
             <p className="mt-1 text-xs text-[#64748B] dark:text-[#94A3B8]">
-              Pastikan ejaan sesuai dengan Buku 5 Master Komoditas SPDT NTP 2026.
+              Pastikan kata kunci sesuai dengan Buku 5 Master Komoditas SPDT NTP 2026.
             </p>
           </div>
         ) : (
@@ -248,7 +290,7 @@ export const CommodityTab: React.FC<CommodityTabProps> = ({
                     key={item.code}
                     className="px-4 py-3 transition hover:bg-[#F8FAFC] sm:px-5 dark:hover:bg-[#1E293B]/50"
                   >
-                    <div className="grid grid-cols-1 items-center gap-2 sm:grid-cols-12 sm:gap-4">
+                    <div className="grid grid-cols-1 items-center gap-1.5 sm:grid-cols-12 sm:gap-4">
                       {/* Col 1: 7-Digit Code */}
                       <div className="flex items-center justify-between sm:col-span-2">
                         <button
