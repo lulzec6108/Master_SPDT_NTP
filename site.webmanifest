@@ -1,0 +1,26 @@
+{
+  "name": "SPDT NTP 2026 - Portal Master Komoditas & Asisten PML BPS",
+  "short_name": "SPDT NTP 2026",
+  "description": "Database 2.986 Komoditas Resmi Buku 5, Kode Petugas 3-Digit, Kamus Subsektor 1-7, & Kalkulator Pemeriksaan PML SPDT NTP 2026.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0B0F19",
+  "theme_color": "#003D7A",
+  "icons": [
+    {
+      "src": "./favicon-32x32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "./apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "./favicon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
