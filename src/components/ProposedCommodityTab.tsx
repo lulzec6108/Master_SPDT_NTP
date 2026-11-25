@@ -25,137 +25,770 @@ interface ProposedCommodityTabProps {
 
 export interface GroupOptionDef {
   groupCode: string;
+  printedPrefix: string;
+  blockName: string;
   groupLabel: string;
   category: CategoryType;
+  recommendedUnits: string[];
+  blockHint?: string;
 }
 
-export const SECTOR_OPTIONS: {
+export interface SectorOptionDef {
   id: ProposedSectorType;
+  subsectorNumber: string;
   label: string;
   shortLabel: string;
   questionnaire: string;
   codeRange: string;
-}[] = [
+  codePrefixes: string[];
+  pdfFileName: string;
+  fieldGuideNote: string;
+}
+
+export const SECTOR_OPTIONS: SectorOptionDef[] = [
   {
     id: 'KONSUMSI',
-    label: '01–11 Konsumsi Rumah Tangga (SPDT26-K)',
+    subsectorNumber: 'K',
+    label: 'K · 01–11 Konsumsi Rumah Tangga (SPDT26-K)',
     shortLabel: 'Konsumsi RT (SPDT26-K)',
     questionnaire: 'SPDT26-K',
     codeRange: '01–11',
+    codePrefixes: ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11'],
+    pdfFileName: 'Kues_SPDT_NTP_2026__Konsumsi__d572b96b.pdf',
+    fieldGuideNote:
+      'Kuesioner Konsumsi Rumah Tangga: Blok V (Makanan, Minuman & Tembakau Seminggu Terakhir) dan Blok VI (Bukan Makanan Sebulan/Setahun Terakhir).',
   },
   {
     id: 'TANAMAN_PANGAN',
-    label: '21–22 Tanaman Pangan (SPDT26-TP)',
-    shortLabel: 'Tanaman Pangan (SPDT26-TP)',
+    subsectorNumber: '1',
+    label: '1 · 21–22 Tanaman Pangan (SPDT26-TP)',
+    shortLabel: '1. Tanaman Pangan (SPDT26-TP)',
     questionnaire: 'SPDT26-TP',
     codeRange: '21–22',
+    codePrefixes: ['21', '22'],
+    pdfFileName: 'Kues_SPDT_NTP_2026__TP__5fdac17d.pdf',
+    fieldGuideNote:
+      'Subsektor 1 Tanaman Pangan: Blok III Produksi (Kode 210....) dan Blok IV Pengeluaran A. Bibit (220....), B.1 Pupuk Subsidi (2203...), B.2 Pupuk Nonsubsidi (2204...), B.3 Obat/Pestisida (2205...), C. Sewa/Pajak (2206...), D. Transportasi (2207...), E. Barang Modal (2208...), F. Upah Buruh (2210...).',
   },
   {
     id: 'HORTIKULTURA',
-    label: '31–32 Hortikultura (SPDT26-TH)',
-    shortLabel: 'Hortikultura (SPDT26-TH)',
+    subsectorNumber: '2',
+    label: '2 · 31–32 Tanaman Hortikultura (SPDT26-TH)',
+    shortLabel: '2. Hortikultura (SPDT26-TH)',
     questionnaire: 'SPDT26-TH',
     codeRange: '31–32',
+    codePrefixes: ['31', '32'],
+    pdfFileName: 'Kues_SPDT_NTP_2026__TH__39bd9c52.pdf',
+    fieldGuideNote:
+      'Subsektor 2 Tanaman Hortikultura: Blok III.A Produksi Sayuran/Buah/Obat/Hias & Blok III.B Penangkaran Tumbuhan Liar (Kode 310....; Satuan Tanam: 1. M², 2. Pohon, 3. Rumpun; Satuan Produksi: 1. Kg, 2. Tangkai, 3. Pohon, 4. Rumpun) serta Blok IV Pengeluaran A s.d. F (320.... s.d. 3210...).',
   },
   {
     id: 'PERKEBUNAN',
-    label: '41–42 Perkebunan (SPDT26-TPR)',
-    shortLabel: 'Perkebunan (SPDT26-TPR)',
+    subsectorNumber: '3',
+    label: '3 · 41–42 Tanaman Perkebunan Rakyat (SPDT26-TPR)',
+    shortLabel: '3. Perkebunan Rakyat (SPDT26-TPR)',
     questionnaire: 'SPDT26-TPR',
     codeRange: '41–42',
+    codePrefixes: ['41', '42'],
+    pdfFileName: 'Kues_SPDT_NTP_2026__TPR__31e54e32.pdf',
+    fieldGuideNote:
+      'Subsektor 3 Perkebunan Rakyat: Blok III Produksi Perkebunan (Kode 410....; Satuan Luas/Tanam: 1. M², 2. Pohon, 3. Rumpun, 4. Lajar; dilengkapi Tabel Faktor Konversi di Hal. 12 PDF) serta Blok IV Pengeluaran A s.d. F (420.... s.d. 4208...).',
   },
   {
     id: 'PETERNAKAN',
-    label: '51–52 Peternakan (SPDT26-TRK)',
-    shortLabel: 'Peternakan (SPDT26-TRK)',
+    subsectorNumber: '4',
+    label: '4 · 51–52 Peternakan (SPDT26-TRK)',
+    shortLabel: '4. Peternakan (SPDT26-TRK)',
     questionnaire: 'SPDT26-TRK',
     codeRange: '51–52',
+    codePrefixes: ['51', '52'],
+    pdfFileName: 'Kues_SPDT_NTP_2026__TRK__2f7addbe.pdf',
+    fieldGuideNote:
+      'Subsektor 4 Peternakan: Blok III.A Produksi Ternak/Unggas (Ekor/Koloni), Blok III.B Penangkaran Satwa Liar (Ekor/Koloni), Blok III.C Hasil Ternak/Unggas (1. Butir, 2. Kg, 3. Liter) [Kode 510....] serta Blok IV Pengeluaran A.1 Bibit/DOC (5201...), A.2 Bakalan (5202...), B.1 Obat/Vaksin (5203–5205...), B.2/B.3 Pakan (5206...), C–F (5207... s.d. 5210...).',
   },
   {
     id: 'PERIKANAN_TANGKAP',
-    label: '61–62 Perikanan Tangkap (SPDT26-IKT)',
-    shortLabel: 'Perikanan Tangkap (SPDT26-IKT)',
+    subsectorNumber: '5',
+    label: '5 · 61–62 Perikanan Tangkap (SPDT26-IKT)',
+    shortLabel: '5. Perikanan Tangkap (SPDT26-IKT)',
     questionnaire: 'SPDT26-IKT',
     codeRange: '61–62',
+    codePrefixes: ['61', '62'],
+    pdfFileName: 'Kues_SPDT_NTP_2026__IKT__45d67ba1.pdf',
+    fieldGuideNote:
+      'Subsektor 5 Perikanan Tangkap: Blok IV Produksi Penangkapan Ikan (Kode 610....; Satuan: Kg; dilengkapi Kamus Nama Ikan Nasional vs Nama Daerah di Hal. 12 PDF) serta Blok V Pengeluaran A. Sewa/Perbekalan (6201...), B. Transportasi (6202...), C. Barang Modal Tangkap (6203...), D. Upah/Bagi Hasil (6204...).',
   },
   {
     id: 'PERIKANAN_BUDIDAYA',
-    label: '71–72 Perikanan Budidaya (SPDT26-IKB)',
-    shortLabel: 'Perikanan Budidaya (SPDT26-IKB)',
+    subsectorNumber: '6',
+    label: '6 · 71–72 Perikanan Budidaya (SPDT26-IKB)',
+    shortLabel: '6. Perikanan Budidaya (SPDT26-IKB)',
     questionnaire: 'SPDT26-IKB',
     codeRange: '71–72',
+    codePrefixes: ['71', '72'],
+    pdfFileName: 'Kues_SPDT_NTP_2026__IKB__985a9e5e.pdf',
+    fieldGuideNote:
+      'Subsektor 6 Perikanan Budidaya: Blok III Produksi Pembudidayaan Ikan (Kode 710....) serta Blok IV Pengeluaran A. Benih Ikan (720....), B.1 Pupuk Subsidi (7204...), B.2 Pupuk Nonsubsidi (7205...), B.3 Obat Budidaya (7206...), B.4 Pakan Ikan (7207...), C. Sewa/Pajak (7208...), D. Transportasi (7209...), E. Barang Modal (7210...), F. Upah Buruh (7211...).',
   },
   {
     id: 'KEHUTANAN',
-    label: '81–82 Kehutanan (SPDT26-HTN)',
-    shortLabel: 'Kehutanan (SPDT26-HTN)',
+    subsectorNumber: '7',
+    label: '7 · 81–82 Kehutanan (SPDT26-HTN)',
+    shortLabel: '7. Kehutanan (SPDT26-HTN)',
     questionnaire: 'SPDT26-HTN',
     codeRange: '81–82',
+    codePrefixes: ['81', '82'],
+    pdfFileName: 'Kues_SPDT_NTP_2026__HTN__95f09896.pdf',
+    fieldGuideNote:
+      'Subsektor 7 Kehutanan: Blok III.A Budidaya Tanaman Kehutanan (Satuan Produksi: 1. Batang, 2. M³, 3. Kg), Blok III.B Pemungutan Hasil Hutan (1. Batang, 2. Liter, 3. Kg, 4. Pohon, 5. M³), Blok III.C Penangkapan Satwa Liar (Ekor) [Kode 810....] serta Blok IV Pengeluaran A s.d. F (820.... s.d. 8210...).',
   },
 ];
 
 const KONSUMSI_GROUP_OPTIONS: GroupOptionDef[] = [
-  ...BLOK_7A_SUBGROUPS.map((s) => ({
-    groupCode: s.code,
-    groupLabel: `Blok V (${s.code}) ${s.label}`,
-    category: 'KONSUMSI' as CategoryType,
-  })),
-  ...BLOK_7B_GROUPS.flatMap((g) =>
-    g.subgroups.map((s) => ({
+  ...BLOK_7A_SUBGROUPS.map((s) => {
+    const rawDigits = s.code.replace(/\./g, '');
+    const prefix = (rawDigits + '....').slice(0, 7);
+    return {
       groupCode: s.code,
-      groupLabel: `Blok VI (${s.code}) ${s.label}`,
+      printedPrefix: prefix,
+      blockName: 'Blok V',
+      groupLabel: `Blok V (${s.code}) — ${s.label}`,
       category: 'KONSUMSI' as CategoryType,
-    }))
+      recommendedUnits: ['KG', 'ONS', 'LITER', 'BUTIR', 'BUNGKUS', 'IKAT', 'PORSI', 'BATANG'],
+      blockHint: 'Konsumsi Makanan, Minuman, dan Tembakau Seminggu Terakhir (Blok V SPDT26-K)',
+    };
+  }),
+  ...BLOK_7B_GROUPS.flatMap((g) =>
+    g.subgroups.map((s) => {
+      const rawDigits = s.code.replace(/\./g, '');
+      const prefix = (rawDigits + '....').slice(0, 7);
+      return {
+        groupCode: s.code,
+        printedPrefix: prefix,
+        blockName: 'Blok VI',
+        groupLabel: `Blok VI (${s.code}) — ${s.label}`,
+        category: 'KONSUMSI' as CategoryType,
+        recommendedUnits: ['BUAH', 'PASANG', 'BULAN', 'KWH', 'LITER', 'PAKET', 'UNIT', 'KALI'],
+        blockHint: `Konsumsi Bukan Makanan — Kelompok ${g.groupTitle} (Blok VI SPDT26-K)`,
+      };
+    })
   ),
 ];
 
-const SECTOR_GROUP_MAP: Record<ProposedSectorType, GroupOptionDef[]> = {
+export const SECTOR_GROUP_MAP: Record<ProposedSectorType, GroupOptionDef[]> = {
   KONSUMSI: KONSUMSI_GROUP_OPTIONS,
   TANAMAN_PANGAN: [
-    { groupCode: '2101', groupLabel: 'Produksi Padi & Palawija (2101)', category: 'PRODUKSI' },
-    { groupCode: '2102', groupLabel: 'Produksi Ikutan Tanaman Pangan (2102)', category: 'PRODUKSI' },
-    { groupCode: '2201', groupLabel: 'Biaya Bibit/Benih Tanaman Pangan (2201)', category: 'BIAYA_PRODUKSI' },
-    { groupCode: '2202', groupLabel: 'Biaya Pupuk & Pestisida Tanaman Pangan (2202)', category: 'BIAYA_PRODUKSI' },
-    { groupCode: '2203', groupLabel: 'Biaya Sewa, Upah & Jasa Pertanian (2203)', category: 'BIAYA_PRODUKSI' },
-    { groupCode: '2204', groupLabel: 'Biaya Produksi Tanaman Pangan Lainnya (2204)', category: 'BIAYA_PRODUKSI' },
+    {
+      groupCode: '210',
+      printedPrefix: '210....',
+      blockName: 'Blok III',
+      groupLabel: 'Blok III — Produksi Tanaman Pangan (Padi, Palawija, Umbi & Hasil Ikutan)',
+      category: 'PRODUKSI',
+      recommendedUnits: ['KG', 'IKAT', 'KARUNG', 'TON'],
+      blockHint: 'Kolom 2 Kuesioner SPDT26-TP tercetak prefix 210.... (Satuan Luas Panen: M²)',
+    },
+    {
+      groupCode: '220',
+      printedPrefix: '220....',
+      blockName: 'Blok IV.A',
+      groupLabel: 'Blok IV.A — Bibit / Benih Tanaman Pangan (Beli maupun Produksi Sendiri)',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['KG', 'BATANG', 'STEK', 'IKAT', 'BUNGKUS'],
+      blockHint: 'Kolom 2 Rincian A Bibit/Benih SPDT26-TP tercetak prefix 220....',
+    },
+    {
+      groupCode: '2203',
+      printedPrefix: '2203...',
+      blockName: 'Blok IV.B.1',
+      groupLabel: 'Blok IV.B.1 — Pupuk Subsidi Tanaman Pangan (Urea, NPK Phonska, Organik)',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['KG', 'LITER', 'SAK'],
+      blockHint: 'Kolom 2 Rincian B.1 Pupuk Subsidi SPDT26-TP tercetak prefix 2203...',
+    },
+    {
+      groupCode: '2204',
+      printedPrefix: '2204...',
+      blockName: 'Blok IV.B.2',
+      groupLabel: 'Blok IV.B.2 — Pupuk Nonsubsidi Tanaman Pangan (Urea, NPK, ZA, SP-36, Kandang/Kompos)',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['KG', 'LITER', 'SAK', 'KARUNG'],
+      blockHint: 'Kolom 2 Rincian B.2 Pupuk Nonsubsidi SPDT26-TP tercetak prefix 2204...',
+    },
+    {
+      groupCode: '2205',
+      printedPrefix: '2205...',
+      blockName: 'Blok IV.B.3',
+      groupLabel: 'Blok IV.B.3 — Obat-obatan / Pestisida / Insektisida / Herbisida / Fungisida / ZPT',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['LITER', 'KG', 'BOTOL', 'BUNGKUS', 'ML', 'GRAM'],
+      blockHint: 'Kolom 2 Rincian B.3 Obat-obatan SPDT26-TP tercetak prefix 2205...',
+    },
+    {
+      groupCode: '2206',
+      printedPrefix: '2206...',
+      blockName: 'Blok IV.C',
+      groupLabel: 'Blok IV.C — Biaya Sewa Lahan/Alat, Pajak, Irigasi, Karung & Pengeluaran Lain',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['MUSIM', 'TAHUN', 'HARI', 'HA', 'LEMBAR', 'BUAH', 'LITER'],
+      blockHint: 'Kolom 2 Rincian C Biaya Sewa, Pajak & Pengeluaran Lain SPDT26-TP tercetak prefix 2206...',
+    },
+    {
+      groupCode: '2207',
+      printedPrefix: '2207...',
+      blockName: 'Blok IV.D',
+      groupLabel: 'Blok IV.D — Transportasi, BBM Usaha, Ongkos Angkut & Komunikasi',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['LITER', 'KALI', 'BULAN', 'KG', 'RETU'],
+      blockHint: 'Kolom 2 Rincian D Transportasi & Komunikasi SPDT26-TP tercetak prefix 2207...',
+    },
+    {
+      groupCode: '2208',
+      printedPrefix: '2208...',
+      blockName: 'Blok IV.E',
+      groupLabel: 'Blok IV.E — Barang Modal Tanaman Pangan (Cangkul, Sabit, Pompa, Traktor, Terpal, dll.)',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['BUAH', 'UNIT', 'SET', 'METER', 'LEMBAR'],
+      blockHint: 'Kolom 2 Rincian E Barang Modal SPDT26-TP tercetak prefix 2208...',
+    },
+    {
+      groupCode: '2210',
+      printedPrefix: '2210...',
+      blockName: 'Blok IV.F',
+      groupLabel: 'Blok IV.F — Upah Buruh Harian / Borongan (Olah Tanah, Tanam, Siang, Panen, Pascapanen)',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['HOK', 'BORONGAN', 'HARI', 'ORANG'],
+      blockHint: 'Kolom 2 Rincian F Upah Buruh SPDT26-TP tercetak prefix 2210...',
+    },
   ],
   HORTIKULTURA: [
-    { groupCode: '3101', groupLabel: 'Produksi Sayuran & Buah Semusim (3101)', category: 'PRODUKSI' },
-    { groupCode: '3102', groupLabel: 'Produksi Buah Tahunan & Tanaman Obat/Hias (3102)', category: 'PRODUKSI' },
-    { groupCode: '3201', groupLabel: 'Biaya Bibit/Benih Hortikultura (3201)', category: 'BIAYA_PRODUKSI' },
-    { groupCode: '3202', groupLabel: 'Biaya Pupuk & Pestisida Hortikultura (3202)', category: 'BIAYA_PRODUKSI' },
-    { groupCode: '3203', groupLabel: 'Biaya Sewa, Upah & Pengeluaran Hortikultura Lainnya (3203)', category: 'BIAYA_PRODUKSI' },
+    {
+      groupCode: '310A',
+      printedPrefix: '310....',
+      blockName: 'Blok III.A',
+      groupLabel: 'Blok III.A — Produksi Tanaman Sayuran, Buah-buahan, Tanaman Obat & Tanaman Hias',
+      category: 'PRODUKSI',
+      recommendedUnits: ['KG', 'TANGKAI', 'POHON', 'RUMPUN', 'IKAT', 'POT'],
+      blockHint:
+        'Kolom 2 Blok III.A SPDT26-TH tercetak 310.... (Satuan Tanam: 1. M², 2. Pohon, 3. Rumpun | Satuan Produksi: 1. Kg, 2. Tangkai, 3. Pohon, 4. Rumpun)',
+    },
+    {
+      groupCode: '310B',
+      printedPrefix: '310....',
+      blockName: 'Blok III.B',
+      groupLabel: 'Blok III.B — Produksi Penangkaran Tumbuhan Liar',
+      category: 'PRODUKSI',
+      recommendedUnits: ['POHON', 'RUMPUN', 'BATANG', 'KG'],
+      blockHint: 'Kolom 2 Blok III.B SPDT26-TH tercetak prefix 310.... (Satuan Baku: Pohon)',
+    },
+    {
+      groupCode: '320',
+      printedPrefix: '320....',
+      blockName: 'Blok IV.A',
+      groupLabel: 'Blok IV.A — Bibit / Benih Hortikultura (Biji, Semai, Stek, Anakan, Umbi Bibit)',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['BUNGKUS', 'GRAM', 'KG', 'POHON', 'BATANG', 'BIJI', 'POLIBAG'],
+      blockHint: 'Kolom 2 Rincian A Bibit/Benih SPDT26-TH tercetak prefix 32.....',
+    },
+    {
+      groupCode: '3204',
+      printedPrefix: '3204...',
+      blockName: 'Blok IV.B.1',
+      groupLabel: 'Blok IV.B.1 — Pupuk Subsidi Hortikultura',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['KG', 'LITER', 'SAK'],
+      blockHint: 'Kolom 2 Rincian B.1 Pupuk Subsidi SPDT26-TH tercetak prefix 3204...',
+    },
+    {
+      groupCode: '3205',
+      printedPrefix: '3205...',
+      blockName: 'Blok IV.B.2',
+      groupLabel: 'Blok IV.B.2 — Pupuk Nonsubsidi Hortikultura (NPK, Kandang, Kompos, Pupuk Daun/Cair)',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['KG', 'LITER', 'SAK', 'KARUNG', 'BOTOL'],
+      blockHint: 'Kolom 2 Rincian B.2 Pupuk Nonsubsidi SPDT26-TH tercetak prefix 3205...',
+    },
+    {
+      groupCode: '3206',
+      printedPrefix: '3206...',
+      blockName: 'Blok IV.B.3',
+      groupLabel: 'Blok IV.B.3 — Obat-obatan / Pestisida / Fungisida / ZPT Hortikultura',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['LITER', 'KG', 'BOTOL', 'BUNGKUS', 'ML', 'GRAM'],
+      blockHint: 'Kolom 2 Rincian B.3 Obat-obatan SPDT26-TH tercetak prefix 3206...',
+    },
+    {
+      groupCode: '3207',
+      printedPrefix: '3207...',
+      blockName: 'Blok IV.C',
+      groupLabel: 'Blok IV.C — Biaya Sewa, Pajak, Mulsa, Ajir/Lanjaran, Pot, Media Tanam & Pengeluaran Lain',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['ROL', 'BATANG', 'BUAH', 'KARUNG', 'MUSIM', 'TAHUN', 'HARI'],
+      blockHint: 'Kolom 2 Rincian C Biaya Sewa, Pajak & Pengeluaran Lain SPDT26-TH tercetak prefix 3207...',
+    },
+    {
+      groupCode: '3208',
+      printedPrefix: '3208...',
+      blockName: 'Blok IV.D',
+      groupLabel: 'Blok IV.D — Transportasi dan Komunikasi Usaha Hortikultura',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['LITER', 'KALI', 'BULAN', 'KG'],
+      blockHint: 'Kolom 2 Rincian D Transportasi & Komunikasi SPDT26-TH tercetak prefix 3208...',
+    },
+    {
+      groupCode: '3209',
+      printedPrefix: '3209...',
+      blockName: 'Blok IV.E',
+      groupLabel: 'Blok IV.E — Barang Modal Hortikultura (Sprayer, Pompa, Selang, Gunting Pangkas, Greenhouse)',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['BUAH', 'UNIT', 'METER', 'ROL', 'SET'],
+      blockHint: 'Kolom 2 Rincian E Barang Modal SPDT26-TH tercetak prefix 3209...',
+    },
+    {
+      groupCode: '3210',
+      printedPrefix: '3210...',
+      blockName: 'Blok IV.F',
+      groupLabel: 'Blok IV.F — Upah Buruh Harian / Borongan Hortikultura',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['HOK', 'BORONGAN', 'HARI'],
+      blockHint: 'Kolom 2 Rincian F Upah Buruh SPDT26-TH tercetak prefix 3210...',
+    },
   ],
   PERKEBUNAN: [
-    { groupCode: '4101', groupLabel: 'Produksi Tanaman Perkebunan Semusim (4101)', category: 'PRODUKSI' },
-    { groupCode: '4102', groupLabel: 'Produksi Tanaman Perkebunan Tahunan (4102)', category: 'PRODUKSI' },
-    { groupCode: '4201', groupLabel: 'Biaya Bibit/Benih Perkebunan (4201)', category: 'BIAYA_PRODUKSI' },
-    { groupCode: '4202', groupLabel: 'Biaya Pupuk, Obat & Bahan Kimia Perkebunan (4202)', category: 'BIAYA_PRODUKSI' },
-    { groupCode: '4203', groupLabel: 'Biaya Upah, Sewa & Pengeluaran Perkebunan Lainnya (4203)', category: 'BIAYA_PRODUKSI' },
+    {
+      groupCode: '410',
+      printedPrefix: '410....',
+      blockName: 'Blok III',
+      groupLabel: 'Blok III — Produksi Tanaman Perkebunan Rakyat (Sawit, Karet, Kopi, Kakao, Kelapa, Tebu, dll.)',
+      category: 'PRODUKSI',
+      recommendedUnits: ['KG', 'LITER', 'BUTIR', 'BATANG', 'IKAT'],
+      blockHint:
+        'Kolom 2 Blok III SPDT26-TPR tercetak 410.... (Satuan Tanam: 1. M², 2. Pohon, 3. Rumpun, 4. Lajar; Lihat Tabel Konversi di Hal. 12 PDF)',
+    },
+    {
+      groupCode: '420',
+      printedPrefix: '420....',
+      blockName: 'Blok IV.A',
+      groupLabel: 'Blok IV.A — Bibit / Benih Tanaman Perkebunan (Kecambah, Bibit Polibag, Stek, Entres)',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['POHON', 'BATANG', 'POLIBAG', 'BUTIR', 'KG'],
+      blockHint: 'Kolom 2 Rincian A Bibit/Benih SPDT26-TPR tercetak prefix 420....',
+    },
+    {
+      groupCode: '4202',
+      printedPrefix: '4202...',
+      blockName: 'Blok IV.B.1',
+      groupLabel: 'Blok IV.B.1 — Pupuk Subsidi Perkebunan',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['KG', 'LITER', 'SAK'],
+      blockHint: 'Kolom 2 Rincian B.1 Pupuk Subsidi SPDT26-TPR tercetak prefix 4202...',
+    },
+    {
+      groupCode: '4203',
+      printedPrefix: '4203...',
+      blockName: 'Blok IV.B.2',
+      groupLabel: 'Blok IV.B.2 — Pupuk Nonsubsidi Perkebunan (Urea, NPK, Dolomit, Kieserite, Borate, Janjang Kosong)',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['KG', 'LITER', 'SAK', 'KARUNG'],
+      blockHint: 'Kolom 2 Rincian B.2 Pupuk Nonsubsidi SPDT26-TPR tercetak prefix 4203...',
+    },
+    {
+      groupCode: '4204',
+      printedPrefix: '4204...',
+      blockName: 'Blok IV.B.3',
+      groupLabel: 'Blok IV.B.3 — Obat-obatan / Herbisida / Pestisida / Asam Semut (Penggumpal Lateks)',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['LITER', 'KG', 'BOTOL', 'BUNGKUS'],
+      blockHint: 'Kolom 2 Rincian B.3 Obat-obatan SPDT26-TPR tercetak prefix 4204...',
+    },
+    {
+      groupCode: '4205',
+      printedPrefix: '4205...',
+      blockName: 'Blok IV.C',
+      groupLabel: 'Blok IV.C — Biaya Sewa, Pajak, Mangkok Sadap, Talang, Karung & Pengeluaran Lainnya',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['BUAH', 'TAHUN', 'MUSIM', 'HARI', 'LEMBAR', 'LITER'],
+      blockHint: 'Kolom 2 Rincian C Biaya Sewa, Pajak & Pengeluaran Lainnya SPDT26-TPR tercetak prefix 4205...',
+    },
+    {
+      groupCode: '4206',
+      printedPrefix: '4206...',
+      blockName: 'Blok IV.D',
+      groupLabel: 'Blok IV.D — Transportasi, Ongkos Angkut TBS/Hasil Kebun & Komunikasi',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['LITER', 'KG', 'TON', 'KALI', 'BULAN'],
+      blockHint: 'Kolom 2 Rincian D Transportasi & Komunikasi SPDT26-TPR tercetak prefix 4206...',
+    },
+    {
+      groupCode: '4207',
+      printedPrefix: '4207...',
+      blockName: 'Blok IV.E',
+      groupLabel: 'Blok IV.E — Barang Modal Perkebunan (Dodos, Egrek, Pisau Sadap, Angkong, Tangki Semprot)',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['BUAH', 'UNIT', 'SET', 'BATANG'],
+      blockHint: 'Kolom 2 Rincian E Barang Modal SPDT26-TPR tercetak prefix 4207...',
+    },
+    {
+      groupCode: '4208',
+      printedPrefix: '4208...',
+      blockName: 'Blok IV.F',
+      groupLabel: 'Blok IV.F — Upah Buruh Harian / Borongan Perkebunan (Rawat, Pupuk, Panen/Sadap, Pascapanen)',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['HOK', 'BORONGAN', 'KG', 'HARI'],
+      blockHint: 'Kolom 2 Rincian F Upah Buruh SPDT26-TPR tercetak prefix 4208...',
+    },
   ],
   PETERNAKAN: [
-    { groupCode: '5101', groupLabel: 'Produksi Ternak Besar & Kecil (5101)', category: 'PRODUKSI' },
-    { groupCode: '5102', groupLabel: 'Produksi Unggas & Hasil Ternak/Telur/Susu (5102)', category: 'PRODUKSI' },
-    { groupCode: '5201', groupLabel: 'Biaya Bibit/Bakalan Ternak & Unggas (5201)', category: 'BIAYA_PRODUKSI' },
-    { groupCode: '5202', groupLabel: 'Biaya Pakan & Obat-obatan Ternak (5202)', category: 'BIAYA_PRODUKSI' },
-    { groupCode: '5203', groupLabel: 'Biaya Kandang, Upah & Pengeluaran Peternakan Lainnya (5203)', category: 'BIAYA_PRODUKSI' },
+    {
+      groupCode: '510A',
+      printedPrefix: '510....',
+      blockName: 'Blok III.A',
+      groupLabel: 'Blok III.A — Produksi Ternak / Unggas (Sapi, Kerbau, Kambing, Domba, Babi, Ayam, Itik, Puyuh, Lebah)',
+      category: 'PRODUKSI',
+      recommendedUnits: ['EKOR', 'KOLONI', 'KG'],
+      blockHint: 'Kolom 2 Blok III.A SPDT26-TRK tercetak prefix 510.... (Satuan: Ekor / Koloni)',
+    },
+    {
+      groupCode: '510B',
+      printedPrefix: '510....',
+      blockName: 'Blok III.B',
+      groupLabel: 'Blok III.B — Produksi Penangkaran Satwa Liar (Burung Berkicau, Rusa, Reptil, dll.)',
+      category: 'PRODUKSI',
+      recommendedUnits: ['EKOR', 'KOLONI', 'PASANG'],
+      blockHint: 'Kolom 2 Blok III.B SPDT26-TRK tercetak prefix 510.... (Satuan: Ekor / Koloni)',
+    },
+    {
+      groupCode: '510C',
+      printedPrefix: '510....',
+      blockName: 'Blok III.C',
+      groupLabel: 'Blok III.C — Produksi Hasil Ternak / Unggas (Telur, Susu Segar, Madu, Wol, Pupuk Kandang/Kotoran)',
+      category: 'PRODUKSI',
+      recommendedUnits: ['BUTIR', 'KG', 'LITER', 'KARUNG'],
+      blockHint: 'Kolom 2 Blok III.C SPDT26-TRK tercetak prefix 510.... (Kode Satuan: 1. Butir, 2. Kg, 3. Liter)',
+    },
+    {
+      groupCode: '5201',
+      printedPrefix: '5201...',
+      blockName: 'Blok IV.A.1',
+      groupLabel: 'Blok IV.A.1 — Bibit / Benih Ternak & Unggas (DOC, DOD, DOQ, Bibit Indukan, Semen Beku/IB)',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['EKOR', 'DOSIS', 'BOKS', 'KOLONI'],
+      blockHint: 'Kolom 2 Rincian A.1 Bibit/Benih Ternak SPDT26-TRK tercetak prefix 5201...',
+    },
+    {
+      groupCode: '5202',
+      printedPrefix: '5202...',
+      blockName: 'Blok IV.A.2',
+      groupLabel: 'Blok IV.A.2 — Bakalan Ternak (Anakan Sapi, Kambing, Domba, Babi untuk Penggemukan)',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['EKOR'],
+      blockHint: 'Kolom 2 Rincian A.2 Bakalan Ternak SPDT26-TRK tercetak prefix 5202...',
+    },
+    {
+      groupCode: '5203',
+      printedPrefix: '5203...',
+      blockName: 'Blok IV.B.1',
+      groupLabel: 'Blok IV.B.1 — Obat-obatan, Vaksin, Vitamin, Mineral & Desinfektan Kandang (5203–5205)',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['BOTOL', 'BUNGKUS', 'DOSIS', 'ML', 'LITER', 'KG', 'SACHET'],
+      blockHint: 'Kolom 2 Rincian B.1 Obat-obatan Ternak SPDT26-TRK mencakup prefix 5203..., 5204..., 5205...',
+    },
+    {
+      groupCode: '5206A',
+      printedPrefix: '5206...',
+      blockName: 'Blok IV.B.2',
+      groupLabel: 'Blok IV.B.2 — Pakan Ternak / Unggas (Konsentrat, Pur/Pelet, Jagung, Dedak, Rumput/Hijauan, Ampas Tahu)',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['KG', 'SAK', 'IKAT', 'KARUNG'],
+      blockHint: 'Kolom 2 Rincian B.2 Pakan Ternak/Unggas SPDT26-TRK tercetak prefix 5206...',
+    },
+    {
+      groupCode: '5206B',
+      printedPrefix: '5206...',
+      blockName: 'Blok IV.B.3',
+      groupLabel: 'Blok IV.B.3 — Pakan Satwa Liar (Jangkrik, Kroto, Ulat Hongkong, Buah, Biji-bijian)',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['KG', 'ONS', 'BUNGKUS', 'EKOR'],
+      blockHint: 'Kolom 2 Rincian B.3 Pakan Satwa Liar SPDT26-TRK tercetak prefix 5206...',
+    },
+    {
+      groupCode: '5207',
+      printedPrefix: '5207...',
+      blockName: 'Blok IV.C',
+      groupLabel: 'Blok IV.C — Biaya Sewa Kandang/Lahan, Pajak, Listrik/Air Kandang, Sekam & Pengeluaran Lain',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['BULAN', 'TAHUN', 'KARUNG', 'KWH', 'TABUNG', 'EKOR'],
+      blockHint: 'Kolom 2 Rincian C Biaya Sewa, Pajak & Pengeluaran Lain SPDT26-TRK tercetak prefix 5207...',
+    },
+    {
+      groupCode: '5208',
+      printedPrefix: '5208...',
+      blockName: 'Blok IV.D',
+      groupLabel: 'Blok IV.D — Transportasi, Angkutan Ternak/Pakan & Komunikasi',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['LITER', 'KALI', 'EKOR', 'BULAN'],
+      blockHint: 'Kolom 2 Rincian D Transportasi & Komunikasi SPDT26-TRK tercetak prefix 5208...',
+    },
+    {
+      groupCode: '5209',
+      printedPrefix: '5209...',
+      blockName: 'Blok IV.E',
+      groupLabel: 'Blok IV.E — Barang Modal Peternakan (Tempat Pakan/Minum, Mesin Chopper, Pemanas/Brooder, Kandang)',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['BUAH', 'UNIT', 'SET', 'METER'],
+      blockHint: 'Kolom 2 Rincian E Barang Modal SPDT26-TRK tercetak prefix 5209...',
+    },
+    {
+      groupCode: '5210',
+      printedPrefix: '5210...',
+      blockName: 'Blok IV.F',
+      groupLabel: 'Blok IV.F — Upah Buruh Harian / Borongan Peternakan (Pemeliharaan Kandang, Cari Rumput, Panen)',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['HOK', 'BULAN', 'BORONGAN', 'HARI'],
+      blockHint: 'Kolom 2 Rincian F Upah Buruh SPDT26-TRK tercetak prefix 5210...',
+    },
   ],
   PERIKANAN_TANGKAP: [
-    { groupCode: '6101', groupLabel: 'Produksi Penangkapan Ikan Perairan Umum/Daratan (6101)', category: 'PRODUKSI' },
-    { groupCode: '6102', groupLabel: 'Produksi Penangkapan Ikan Laut (6102)', category: 'PRODUKSI' },
-    { groupCode: '6201', groupLabel: 'Biaya Perbekalan, BBM, Es & Umpan Tangkap (6201)', category: 'BIAYA_PRODUKSI' },
-    { groupCode: '6202', groupLabel: 'Biaya Pemeliharaan Perahu/Mesin/Alat Tangkap & Upah (6202)', category: 'BIAYA_PRODUKSI' },
+    {
+      groupCode: '610',
+      printedPrefix: '610....',
+      blockName: 'Blok IV',
+      groupLabel: 'Blok IV — Produksi Perikanan Kegiatan Penangkapan Ikan (Laut & Perairan Umum Daratan)',
+      category: 'PRODUKSI',
+      recommendedUnits: ['KG'],
+      blockHint:
+        'Kolom 2 Blok IV SPDT26-IKT tercetak prefix 610.... (Satuan: Kg; Lihat Daftar Nama Ikan Nasional vs Nama Daerah di Hal. 12 PDF)',
+    },
+    {
+      groupCode: '6201',
+      printedPrefix: '6201...',
+      blockName: 'Blok V.A',
+      groupLabel: 'Blok V.A — Biaya Sewa Perahu/Alat, Pajak/Retribusi Lelang, Es Balok, Umpan, Garam & Perbekalan Melaut',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['BALOK', 'KG', 'LITER', 'TRIP', 'BUNGKUS', 'TAHUN'],
+      blockHint: 'Kolom 2 Blok V Rincian A SPDT26-IKT tercetak prefix 6201...',
+    },
+    {
+      groupCode: '6202',
+      printedPrefix: '6202...',
+      blockName: 'Blok V.B',
+      groupLabel: 'Blok V.B — Transportasi, BBM Melaut/Angkut & Komunikasi Penangkapan Ikan',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['LITER', 'TRIP', 'BULAN', 'KALI'],
+      blockHint: 'Kolom 2 Blok V Rincian B Transportasi & Komunikasi SPDT26-IKT tercetak prefix 6202...',
+    },
+    {
+      groupCode: '6203',
+      printedPrefix: '6203...',
+      blockName: 'Blok V.C',
+      groupLabel: 'Blok V.C — Barang Modal Penangkapan Ikan (Perahu, Mesin Tempel, Jaring, Pancing, Bubu, Coolbox, GPS)',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['UNIT', 'BUAH', 'SET', 'PCS', 'ROL', 'METER'],
+      blockHint: 'Kolom 2 Blok V Rincian C Barang Modal SPDT26-IKT tercetak prefix 6203...',
+    },
+    {
+      groupCode: '6204',
+      printedPrefix: '6204...',
+      blockName: 'Blok V.D',
+      groupLabel: 'Blok V.D — Upah Buruh / ABK Harian, Borongan & Bagi Hasil Penangkapan Ikan',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['TRIP', 'HOK', 'BAGI HASIL', 'BULAN'],
+      blockHint: 'Kolom 2 Blok V Rincian D Upah Buruh SPDT26-IKT tercetak prefix 6204...',
+    },
   ],
   PERIKANAN_BUDIDAYA: [
-    { groupCode: '7101', groupLabel: 'Produksi Budidaya Air Tawar/Payau/Laut (7101–7103)', category: 'PRODUKSI' },
-    { groupCode: '7104', groupLabel: 'Produksi Budidaya Ikan Hias (7104)', category: 'PRODUKSI' },
-    { groupCode: '7201', groupLabel: 'Biaya Benih, Pakan, Pupuk & Obat Budidaya Ikan (7201)', category: 'BIAYA_PRODUKSI' },
-    { groupCode: '7202', groupLabel: 'Biaya Sewa Kolam/Tambak, Upah & Peralatan Budidaya (7202)', category: 'BIAYA_PRODUKSI' },
+    {
+      groupCode: '710',
+      printedPrefix: '710....',
+      blockName: 'Blok III',
+      groupLabel: 'Blok III — Produksi Perikanan Kegiatan Pembudidayaan Ikan (Konsumsi, Ikan Hias, Rumput Laut)',
+      category: 'PRODUKSI',
+      recommendedUnits: ['KG', 'EKOR', 'PASANG'],
+      blockHint: 'Kolom 2 Blok III SPDT26-IKB tercetak prefix 710.... (Satuan: Kg / Ekor)',
+    },
+    {
+      groupCode: '720',
+      printedPrefix: '720....',
+      blockName: 'Blok IV.A',
+      groupLabel: 'Blok IV.A — Benih Ikan Budidaya (Benih/Bibit Ikan, Nener, Benur Udang, Bibit Rumput Laut)',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['EKOR', 'RIBU EKOR', 'KG', 'KANTONG', 'REAN'],
+      blockHint: 'Kolom 2 Rincian A Benih Ikan SPDT26-IKB tercetak prefix 720....',
+    },
+    {
+      groupCode: '7204',
+      printedPrefix: '7204...',
+      blockName: 'Blok IV.B.1',
+      groupLabel: 'Blok IV.B.1 — Pupuk Subsidi Budidaya Ikan (Urea/SP-36/Organik Tambak & Kolam)',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['KG', 'LITER', 'SAK'],
+      blockHint: 'Kolom 2 Rincian B.1 Pupuk Subsidi SPDT26-IKB tercetak prefix 7204...',
+    },
+    {
+      groupCode: '7205',
+      printedPrefix: '7205...',
+      blockName: 'Blok IV.B.2',
+      groupLabel: 'Blok IV.B.2 — Pupuk Nonsubsidi Budidaya Ikan (Pupuk Kandang, Urea, TSP, Tonik Tambak)',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['KG', 'LITER', 'SAK', 'KARUNG'],
+      blockHint: 'Kolom 2 Rincian B.2 Pupuk Non Subsidi SPDT26-IKB tercetak prefix 7205...',
+    },
+    {
+      groupCode: '7206',
+      printedPrefix: '7206...',
+      blockName: 'Blok IV.B.3',
+      groupLabel: 'Blok IV.B.3 — Obat-obatan, Probiotik, Vitamin, Kapur/Dolomit & Saponin Budidaya Ikan',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['LITER', 'KG', 'BOTOL', 'BUNGKUS', 'SAK'],
+      blockHint: 'Kolom 2 Rincian B.3 Obat-obatan SPDT26-IKB tercetak prefix 7206...',
+    },
+    {
+      groupCode: '7207',
+      printedPrefix: '7207...',
+      blockName: 'Blok IV.B.4',
+      groupLabel: 'Blok IV.B.4 — Pakan Ikan (Pelet Pabrikan, Pakan Mandiri, Ikan Rucah, Cacing/Artemia, Dedak)',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['KG', 'SAK', 'KALENG', 'BUNGKUS'],
+      blockHint: 'Kolom 2 Rincian B.4 Pakan Ikan SPDT26-IKB tercetak prefix 7207...',
+    },
+    {
+      groupCode: '7208',
+      printedPrefix: '7208...',
+      blockName: 'Blok IV.C',
+      groupLabel: 'Blok IV.C — Biaya Sewa Kolam/Tambak, Pajak, Listrik Kincir/Pompa, Plastik Packing & Oksigen',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['MUSIM', 'TAHUN', 'BULAN', 'KWH', 'TABUNG', 'PAK'],
+      blockHint: 'Kolom 2 Rincian C Biaya Sewa, Pajak & Pengeluaran Lainnya SPDT26-IKB tercetak prefix 7208...',
+    },
+    {
+      groupCode: '7209',
+      printedPrefix: '7209...',
+      blockName: 'Blok IV.D',
+      groupLabel: 'Blok IV.D — Transportasi, BBM Pompa/Angkut & Komunikasi Budidaya Ikan',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['LITER', 'KALI', 'BULAN', 'KG'],
+      blockHint: 'Kolom 2 Rincian D Transportasi & Komunikasi SPDT26-IKB tercetak prefix 7209...',
+    },
+    {
+      groupCode: '7210',
+      printedPrefix: '7210...',
+      blockName: 'Blok IV.E',
+      groupLabel: 'Blok IV.E — Barang Modal Budidaya Ikan (Kincir Air, Pompa, Terpal Kolam, Waring/Jaring KJA, Aerator)',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['UNIT', 'BUAH', 'METER', 'ROL', 'LEMBAR', 'SET'],
+      blockHint: 'Kolom 2 Rincian E Barang Modal SPDT26-IKB tercetak prefix 7210...',
+    },
+    {
+      groupCode: '7211',
+      printedPrefix: '7211...',
+      blockName: 'Blok IV.F',
+      groupLabel: 'Blok IV.F — Upah Buruh Harian / Borongan Budidaya Ikan (Olah Tambak/Kolam, Jaga, Panen, Ikat Bibit)',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['HOK', 'BORONGAN', 'BULAN', 'BENTANG'],
+      blockHint: 'Kolom 2 Rincian F Upah Buruh SPDT26-IKB tercetak prefix 7211...',
+    },
   ],
   KEHUTANAN: [
-    { groupCode: '8101', groupLabel: 'Produksi Kayu & Hasil Hutan Bukan Kayu / Penangkaran (8101–8103)', category: 'PRODUKSI' },
-    { groupCode: '8201', groupLabel: 'Biaya Bibit, Pupuk & Sarana Produksi Kehutanan (8201)', category: 'BIAYA_PRODUKSI' },
-    { groupCode: '8202', groupLabel: 'Biaya Upah Tebang/Angkut & Pengeluaran Kehutanan Lainnya (8202)', category: 'BIAYA_PRODUKSI' },
+    {
+      groupCode: '810A',
+      printedPrefix: '810....',
+      blockName: 'Blok III.A',
+      groupLabel: 'Blok III.A — Produksi Budidaya Tanaman Kehutanan (Jati, Sengon, Mahoni, Akasia, Bambu, Rotan, dll.)',
+      category: 'PRODUKSI',
+      recommendedUnits: ['BATANG', 'M3', 'KG', 'POHON', 'RUMPUN'],
+      blockHint:
+        'Kolom 2 Blok III.A SPDT26-HTN tercetak 810.... (Satuan Tanam: 1. Pohon, 2. Lajar, 3. Rumpun | Satuan Produksi: 1. Batang, 2. M³, 3. Kg)',
+    },
+    {
+      groupCode: '810B',
+      printedPrefix: '810....',
+      blockName: 'Blok III.B',
+      groupLabel: 'Blok III.B — Produksi Pemungutan Hasil Hutan Kayu & Bukan Kayu (Getah Pinus/Damar, Madu Hutan, Gaharu, Kayu Bakar)',
+      category: 'PRODUKSI',
+      recommendedUnits: ['BATANG', 'LITER', 'KG', 'POHON', 'M3', 'IKAT'],
+      blockHint:
+        'Kolom 2 Blok III.B SPDT26-HTN tercetak 810.... (Kode Satuan Produksi: 1. Batang, 2. Liter, 3. Kg, 4. Pohon, 5. M³)',
+    },
+    {
+      groupCode: '810C',
+      printedPrefix: '810....',
+      blockName: 'Blok III.C',
+      groupLabel: 'Blok III.C — Produksi Penangkapan Satwa Liar Kehutanan',
+      category: 'PRODUKSI',
+      recommendedUnits: ['EKOR', 'PASANG'],
+      blockHint: 'Kolom 2 Blok III.C SPDT26-HTN tercetak prefix 810.... (Satuan: Ekor)',
+    },
+    {
+      groupCode: '820',
+      printedPrefix: '820....',
+      blockName: 'Blok IV.A',
+      groupLabel: 'Blok IV.A — Bibit / Benih Tanaman Kehutanan (Anakan, Stump, Bibit Polibag, Benih Biji)',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['BATANG', 'POHON', 'POLIBAG', 'KG'],
+      blockHint: 'Kolom 2 Rincian A Bibit/Benih SPDT26-HTN tercetak prefix 820....',
+    },
+    {
+      groupCode: '8203',
+      printedPrefix: '8203...',
+      blockName: 'Blok IV.B.1',
+      groupLabel: 'Blok IV.B.1 — Pupuk Subsidi & Nonsubsidi Kehutanan (8203 / 8204)',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['KG', 'LITER', 'SAK', 'KARUNG'],
+      blockHint: 'Kolom 2 Rincian B.1 Pupuk Kehutanan SPDT26-HTN tercetak prefix 8203... (Subsidi) & 8204... (Nonsubsidi)',
+    },
+    {
+      groupCode: '8205',
+      printedPrefix: '8205...',
+      blockName: 'Blok IV.B.2',
+      groupLabel: 'Blok IV.B.2 — Obat-obatan / Pestisida / Herbisida / Stimulan Sadap Kehutanan',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['LITER', 'KG', 'BOTOL', 'BUNGKUS'],
+      blockHint: 'Kolom 2 Rincian B.2 Obat-obatan SPDT26-HTN tercetak prefix 8205...',
+    },
+    {
+      groupCode: '8206',
+      printedPrefix: '8206...',
+      blockName: 'Blok IV.B.3',
+      groupLabel: 'Blok IV.B.3 — Pakan Satwa Liar Kehutanan',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['KG', 'ONS', 'IKAT'],
+      blockHint: 'Kolom 2 Rincian B.3 Pakan Satwa Liar SPDT26-HTN tercetak prefix 8206...',
+    },
+    {
+      groupCode: '8207',
+      printedPrefix: '8207...',
+      blockName: 'Blok IV.C',
+      groupLabel: 'Blok IV.C — Biaya Sewa, Pajak, Iuran/Retribusi Kehutanan, BBM Chainsaw & Pengeluaran Lain',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['TAHUN', 'MUSIM', 'LITER', 'HA', 'BUAH'],
+      blockHint: 'Kolom 2 Rincian C Biaya Sewa, Pajak & Pengeluaran Lain SPDT26-HTN tercetak prefix 8207...',
+    },
+    {
+      groupCode: '8208',
+      printedPrefix: '8208...',
+      blockName: 'Blok IV.D',
+      groupLabel: 'Blok IV.D — Transportasi, Ongkos Angkut Kayu/Hasil Hutan & Komunikasi',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['LITER', 'M3', 'RETU', 'KALI', 'BULAN'],
+      blockHint: 'Kolom 2 Rincian D Transportasi & Komunikasi SPDT26-HTN tercetak prefix 8208...',
+    },
+    {
+      groupCode: '8209',
+      printedPrefix: '8209...',
+      blockName: 'Blok IV.E',
+      groupLabel: 'Blok IV.E — Barang Modal Kehutanan (Chainsaw/Gergaji Mesin, Parang, Kapak, Pisau Sadap, Tali/Tambang)',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['UNIT', 'BUAH', 'SET', 'METER'],
+      blockHint: 'Kolom 2 Rincian E Barang Modal SPDT26-HTN tercetak prefix 8209...',
+    },
+    {
+      groupCode: '8210',
+      printedPrefix: '8210...',
+      blockName: 'Blok IV.F',
+      groupLabel: 'Blok IV.F — Upah Buruh Harian / Borongan Kehutanan (Tanam, Tebang, Belah, Pikul/Angkut)',
+      category: 'BIAYA_PRODUKSI',
+      recommendedUnits: ['HOK', 'BORONGAN', 'M3', 'BATANG', 'HARI'],
+      blockHint: 'Kolom 2 Rincian F Upah Buruh SPDT26-HTN tercetak prefix 8210...',
+    },
   ],
 };
 
@@ -168,22 +801,38 @@ const COMMON_UNITS = [
   'BATANG',
   'BUAH',
   'EKOR',
-  'PORSI',
-  'BOTOL',
-  'SACHET',
-  'KALENG',
   'POHON',
+  'RUMPUN',
+  'M3',
+  'HOK',
+  'BORONGAN',
+  'SAK',
+  'UNIT',
   'PAKET',
 ];
+
+function getPrintedPrefixForProposal(item: ProposedCommodityItem): string {
+  const groups = SECTOR_GROUP_MAP[item.sector] || [];
+  const found = groups.find(
+    (g) => g.groupCode === item.groupCode || item.groupLabel.includes(g.blockName)
+  );
+  if (found) return found.printedPrefix;
+  const digits = item.groupCode.replace(/[^0-9]/g, '');
+  if (digits.length >= 3) return (digits + '....').slice(0, 7);
+  return item.groupCode;
+}
 
 /**
  * Renders the proposal list onto a high-DPI HTML5 Canvas for PNG & PDF export.
  */
-function renderProposalsToCanvas(items: ProposedCommodityItem[]): HTMLCanvasElement {
+function renderProposalsToCanvas(
+  items: ProposedCommodityItem[],
+  activeSectorFilter: ProposedSectorType | 'ALL'
+): HTMLCanvasElement {
   const scale = 2;
-  const width = 1240;
-  const rowHeight = 46;
-  const headerHeight = 135;
+  const width = 1260;
+  const rowHeight = 48;
+  const headerHeight = 138;
   const tableHeaderHeight = 42;
   const footerHeight = 52;
   const rowsCount = Math.max(1, items.length);
@@ -201,16 +850,27 @@ function renderProposalsToCanvas(items: ProposedCommodityItem[]): HTMLCanvasElem
 
   // Top Institutional Banner
   ctx.fillStyle = '#003D7A';
-  ctx.fillRect(0, 0, width, 96);
+  ctx.fillRect(0, 0, width, 98);
+
+  const activeSecObj =
+    activeSectorFilter !== 'ALL'
+      ? SECTOR_OPTIONS.find((s) => s.id === activeSectorFilter)
+      : undefined;
 
   ctx.fillStyle = '#FFFFFF';
-  ctx.font = 'bold 20px Montserrat, sans-serif';
-  ctx.fillText('DAFTAR PENGAJUAN KOMODITAS BELUM BERKODE — SPDT NTP 2026', 28, 38);
+  ctx.font = 'bold 19px Montserrat, sans-serif';
+  ctx.fillText(
+    activeSecObj
+      ? `USULAN KODE KOMODITAS BARU — KUESIONER ${activeSecObj.questionnaire} (${activeSecObj.shortLabel.toUpperCase()})`
+      : 'DAFTAR USULAN KODE KOMODITAS BARU (8 KUESIONER SPDT NTP 2026)',
+    28,
+    38
+  );
 
   ctx.fillStyle = '#BAE6FD';
   ctx.font = '600 13px Montserrat, sans-serif';
   ctx.fillText(
-    'Rekapitulasi Komoditas Lapangan yang Belum Tercantum di Buku 5 Master Komoditas',
+    'Rekapitulasi Komoditas Lapangan Belum Berkode di Buku 5 Master Komoditas (Beserta Prefix Kode Kuesioner)',
     28,
     62
   );
@@ -221,35 +881,40 @@ function renderProposalsToCanvas(items: ProposedCommodityItem[]): HTMLCanvasElem
   });
   ctx.fillStyle = '#E2E8F0';
   ctx.font = '500 12px "JetBrains Mono", monospace';
-  ctx.fillText(`Total Usulan: ${items.length} Komoditas  |  Dicetak: ${nowStr}`, 28, 84);
+  ctx.fillText(
+    `Cakupan: ${activeSecObj ? activeSecObj.label : 'Semua 8 Kuesioner (SPDT26-K s.d. SPDT26-HTN)'}  |  Total: ${items.length} Usulan  |  Dicetak: ${nowStr}`,
+    28,
+    84
+  );
 
   // Subtitle Strip
   ctx.fillStyle = '#F8FAFC';
-  ctx.fillRect(0, 96, width, 39);
+  ctx.fillRect(0, 98, width, 40);
   ctx.strokeStyle = '#E2E8F0';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(0, 135);
-  ctx.lineTo(width, 135);
+  ctx.moveTo(0, 138);
+  ctx.lineTo(width, 138);
   ctx.stroke();
 
   ctx.fillStyle = '#334155';
   ctx.font = '600 12px Montserrat, sans-serif';
   ctx.fillText(
-    'Status: BELUM ADA KODE DI BUKU 5 MASTER KOMODITAS (Diajukan oleh PCL / PML Lapangan)',
+    'Status: BELUM ADA KODE DI BUKU 5 MASTER KOMODITAS (Diajukan oleh PCL / PML Lapangan beserta Prefix Kolom Kode Pengawas)',
     28,
-    120
+    122
   );
 
   // Table Columns Definition
   const cols = [
-    { title: 'NO', x: 20, w: 40 },
-    { title: 'STATUS KODE', x: 65, w: 135 },
-    { title: 'NAMA KOMODITAS DIAJUKAN', x: 208, w: 235 },
-    { title: 'SATUAN', x: 450, w: 80 },
-    { title: 'KUESIONER / SUBSEKTOR', x: 538, w: 185 },
-    { title: 'KELOMPOK / SUBKELOMPOK', x: 730, w: 245 },
-    { title: 'PETUGAS & CATATAN', x: 982, w: 240 },
+    { title: 'NO', x: 18, w: 36 },
+    { title: 'STATUS KODE', x: 58, w: 125 },
+    { title: 'PREFIX KODE', x: 188, w: 96 },
+    { title: 'NAMA KOMODITAS DIAJUKAN', x: 290, w: 225 },
+    { title: 'SATUAN', x: 522, w: 78 },
+    { title: 'KUESIONER / SUBSEKTOR', x: 606, w: 175 },
+    { title: 'BLOK & RINCIAN KUESIONER', x: 788, w: 245 },
+    { title: 'PETUGAS & CATATAN', x: 1040, w: 205 },
   ];
 
   // Table Header
@@ -270,7 +935,7 @@ function renderProposalsToCanvas(items: ProposedCommodityItem[]): HTMLCanvasElem
     const rY = thY + tableHeaderHeight;
     ctx.fillStyle = '#64748B';
     ctx.font = '500 13px Montserrat, sans-serif';
-    ctx.fillText('Belum ada komoditas yang diajukan.', 28, rY + 28);
+    ctx.fillText('Belum ada komoditas yang diajukan pada filter kuesioner ini.', 28, rY + 28);
   } else {
     items.forEach((item, idx) => {
       const rY = thY + tableHeaderHeight + idx * rowHeight;
@@ -287,53 +952,61 @@ function renderProposalsToCanvas(items: ProposedCommodityItem[]): HTMLCanvasElem
       // 1. No
       ctx.fillStyle = '#475569';
       ctx.font = 'bold 12px "JetBrains Mono", monospace';
-      ctx.fillText(String(idx + 1).padStart(2, '0'), cols[0].x, rY + 27);
+      ctx.fillText(String(idx + 1).padStart(2, '0'), cols[0].x, rY + 28);
 
       // 2. Status Badge
       const isReviewed = item.status === 'DITINJAU_PML';
       ctx.fillStyle = isReviewed ? '#FEF3C7' : '#FFE4E6';
-      ctx.fillRect(cols[1].x, rY + 12, 122, 22);
+      ctx.fillRect(cols[1].x, rY + 13, 116, 22);
       ctx.fillStyle = isReviewed ? '#92400E' : '#BE123C';
       ctx.font = 'bold 10px "JetBrains Mono", monospace';
-      ctx.fillText(isReviewed ? 'DITINJAU PML' : 'BELUM ADA KODE', cols[1].x + 8, rY + 27);
+      ctx.fillText(isReviewed ? 'DITINJAU PML' : 'BELUM ADA KODE', cols[1].x + 7, rY + 28);
 
-      // 3. Commodity Name
-      ctx.fillStyle = '#0F172A';
-      ctx.font = 'bold 12px Montserrat, sans-serif';
-      ctx.fillText(truncate(item.name, 30), cols[2].x, rY + 27);
-
-      // 4. Unit
+      // 3. Printed Prefix Badge
+      const prefixStr = getPrintedPrefixForProposal(item);
+      ctx.fillStyle = '#EFF6FF';
+      ctx.fillRect(cols[2].x, rY + 13, 84, 22);
       ctx.fillStyle = '#003D7A';
       ctx.font = 'bold 11px "JetBrains Mono", monospace';
-      ctx.fillText(truncate(item.unit, 10), cols[3].x, rY + 27);
+      ctx.fillText(truncate(prefixStr, 10), cols[2].x + 8, rY + 28);
 
-      // 5. Sector
+      // 4. Commodity Name
+      ctx.fillStyle = '#0F172A';
+      ctx.font = 'bold 12px Montserrat, sans-serif';
+      ctx.fillText(truncate(item.name, 28), cols[3].x, rY + 28);
+
+      // 5. Unit
+      ctx.fillStyle = '#003D7A';
+      ctx.font = 'bold 11px "JetBrains Mono", monospace';
+      ctx.fillText(truncate(item.unit, 10), cols[4].x, rY + 28);
+
+      // 6. Questionnaire / Sector
       const secObj = SECTOR_OPTIONS.find((s) => s.id === item.sector);
       ctx.fillStyle = '#334155';
       ctx.font = '600 11px Montserrat, sans-serif';
       ctx.fillText(
-        truncate(secObj ? secObj.shortLabel : item.sector, 26),
-        cols[4].x,
-        rY + 27
+        truncate(secObj ? `${secObj.questionnaire} (${secObj.codeRange})` : item.sector, 24),
+        cols[5].x,
+        rY + 28
       );
 
-      // 6. Group / Subgroup
+      // 7. Block & Group Label
       ctx.fillStyle = '#0F172A';
       ctx.font = '600 11px Montserrat, sans-serif';
       ctx.fillText(
         truncate(`[${item.groupCode}] ${item.groupLabel}`, 34),
-        cols[5].x,
-        rY + 27
+        cols[6].x,
+        rY + 28
       );
 
-      // 7. Officer & Note
+      // 8. Officer & Note
       ctx.fillStyle = '#334155';
       ctx.font = '600 11px Montserrat, sans-serif';
       const officerText = `${item.officerCode} - ${item.officerName}`;
-      ctx.fillText(truncate(officerText, 32), cols[6].x, rY + 20);
+      ctx.fillText(truncate(officerText, 27), cols[7].x, rY + 20);
       ctx.fillStyle = '#64748B';
       ctx.font = '500 10px Montserrat, sans-serif';
-      ctx.fillText(truncate(item.note || '-', 36), cols[6].x, rY + 35);
+      ctx.fillText(truncate(item.note || '-', 31), cols[7].x, rY + 36);
     });
   }
 
@@ -344,7 +1017,7 @@ function renderProposalsToCanvas(items: ProposedCommodityItem[]): HTMLCanvasElem
   ctx.fillStyle = '#64748B';
   ctx.font = '600 11px Montserrat, sans-serif';
   ctx.fillText(
-    'Portal Master Komoditas & Pemeriksaan PML SPDT NTP 2026 — Database Murni Buku 5 & Rekap Pengajuan Lapangan',
+    'Portal Master Komoditas & Pemeriksaan PML SPDT NTP 2026 — Database Murni Buku 5 & Rekap Usulan Kode Komoditas 8 Kuesioner',
     28,
     fY + 30
   );
@@ -468,28 +1141,64 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
     }
   }, [initialDraftName, onClearDraftName]);
 
+  const currentSectorObj = useMemo(
+    () => SECTOR_OPTIONS.find((s) => s.id === sector) || SECTOR_OPTIONS[0],
+    [sector]
+  );
+
   const availableGroups = useMemo(() => SECTOR_GROUP_MAP[sector] || [], [sector]);
 
   useEffect(() => {
     setSelectedGroupIdx(0);
+    const firstGroup = (SECTOR_GROUP_MAP[sector] || [])[0];
+    if (firstGroup && firstGroup.recommendedUnits.length > 0) {
+      setUnit(firstGroup.recommendedUnits[0]);
+    }
   }, [sector]);
 
   const currentGroup = availableGroups[selectedGroupIdx] || availableGroups[0];
 
-  // Live Buku 5 Duplicate / Similarity Checker
+  const handleSelectGroup = (idx: number) => {
+    setSelectedGroupIdx(idx);
+    const grp = availableGroups[idx];
+    if (grp && grp.recommendedUnits.length > 0) {
+      setUnit(grp.recommendedUnits[0]);
+    }
+  };
+
+  // Count proposals per questionnaire for badges
+  const proposalCountsBySector = useMemo(() => {
+    const counts: Record<string, number> = { ALL: proposals.length };
+    SECTOR_OPTIONS.forEach((s) => {
+      counts[s.id] = 0;
+    });
+    proposals.forEach((p) => {
+      counts[p.sector] = (counts[p.sector] || 0) + 1;
+    });
+    return counts;
+  }, [proposals]);
+
+  // Live Buku 5 Duplicate / Similarity Checker (prioritizes items from the active questionnaire subsector)
   const matchingBuku5Items = useMemo(() => {
     const q = name.trim().toLowerCase();
     if (q.length < 2) return [];
     const tokens = q.split(/\s+/).filter((t) => t.length >= 2);
     if (tokens.length === 0) return [];
 
+    const activePrefixes = currentSectorObj.codePrefixes;
+
     return commodities
       .filter((c) => {
         const cName = c.name.toLowerCase();
         return cName.includes(q) || tokens.every((t) => cName.includes(t));
       })
+      .sort((a, b) => {
+        const aInSector = activePrefixes.some((pref) => a.code.startsWith(pref)) ? 1 : 0;
+        const bInSector = activePrefixes.some((pref) => b.code.startsWith(pref)) ? 1 : 0;
+        return bInSector - aInSector;
+      })
       .slice(0, 6);
-  }, [name, commodities]);
+  }, [name, commodities, currentSectorObj]);
 
   // Filtered Proposals
   const filteredProposals = useMemo(() => {
@@ -498,13 +1207,15 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
       if (filterSector !== 'ALL' && item.sector !== filterSector) return false;
       if (filterCategory !== 'ALL' && item.category !== filterCategory) return false;
       if (!q) return true;
+      const prefix = getPrintedPrefixForProposal(item).toLowerCase();
       return (
         item.name.toLowerCase().includes(q) ||
         item.groupCode.toLowerCase().includes(q) ||
         item.groupLabel.toLowerCase().includes(q) ||
+        prefix.includes(q) ||
         item.officerName.toLowerCase().includes(q) ||
         item.officerCode.toLowerCase().includes(q) ||
-        item.note.toLowerCase().includes(q)
+        (item.note || '').toLowerCase().includes(q)
       );
     });
   }, [proposals, filterSector, filterCategory, searchQuery]);
@@ -530,6 +1241,10 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
       ? officerObj.name
       : customOfficerName.trim().toUpperCase() || 'PETUGAS LAPANGAN';
 
+    const noteWithPrefix = note.trim()
+      ? `[Prefix ${currentGroup.printedPrefix}] ${note.trim()}`
+      : `Prefix Kode Kuesioner ${currentSectorObj.questionnaire} (${currentGroup.blockName}): ${currentGroup.printedPrefix}`;
+
     setIsSubmitting(true);
     try {
       await onAddProposal({
@@ -541,7 +1256,7 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
         groupLabel: currentGroup.groupLabel.slice(0, 160),
         officerCode: finalOfficerCode.slice(0, 16),
         officerName: finalOfficerName.slice(0, 120),
-        note: note.trim().slice(0, 400),
+        note: noteWithPrefix.slice(0, 400),
         status: 'BELUM_ADA_KODE',
       });
       setName('');
@@ -556,18 +1271,26 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
   };
 
   // ============================================================================
-  // EXPORT HANDLERS: CSV, PNG, PDF
+  // EXPORT HANDLERS: CSV, PNG, PDF (Scoped to active questionnaire filter)
   // ============================================================================
+  const activeFilterSuffix = useMemo(() => {
+    if (filterSector === 'ALL') return '8_kuesioner_spdt2026';
+    const sec = SECTOR_OPTIONS.find((s) => s.id === filterSector);
+    return sec ? `${sec.questionnaire.toLowerCase()}_spdt2026` : 'spdt2026';
+  }, [filterSector]);
+
   const handleExportCsv = () => {
     const headers = [
       'No',
       'Status Kode',
+      'Kuesioner',
+      'Subsektor',
+      'Blok & Kode Kelompok',
+      'Prefix Kode Cetakan Kuesioner',
+      'Nama Blok / Rincian Kuesioner',
+      'Kategori',
       'Nama Komoditas Diajukan',
       'Satuan',
-      'Subsektor / Kuesioner',
-      'Kategori',
-      'Kode Kelompok',
-      'Nama Kelompok / Subkelompok',
       'Kode Petugas',
       'Nama Petugas Pengaju',
       'Catatan Lapangan',
@@ -578,19 +1301,22 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
 
     const rows = filteredProposals.map((item, idx) => {
       const secObj = SECTOR_OPTIONS.find((s) => s.id === item.sector);
+      const prefixStr = getPrintedPrefixForProposal(item);
       const dateStr = new Date(item.createdAtMs).toLocaleString('id-ID');
       return [
         String(idx + 1),
         item.status === 'DITINJAU_PML' ? 'DITINJAU PML' : 'BELUM ADA KODE',
+        secObj ? secObj.questionnaire : item.sector,
+        secObj ? secObj.label : item.sector,
+        item.groupCode,
+        prefixStr,
+        item.groupLabel,
+        item.category,
         item.name,
         item.unit,
-        secObj ? secObj.label : item.sector,
-        item.category,
-        item.groupCode,
-        item.groupLabel,
         item.officerCode,
         item.officerName,
-        item.note,
+        item.note || '',
         dateStr,
       ]
         .map(escapeCsv)
@@ -602,61 +1328,78 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'daftar_pengajuan_komoditas_belum_berkode_spdt2026.csv';
+    link.download = `usulan_kode_komoditas_${activeFilterSuffix}.csv`;
     link.click();
     URL.revokeObjectURL(url);
-    onCopyText('CSV Diunduh', `${filteredProposals.length} komoditas diekspor ke CSV`);
+    onCopyText('CSV Diunduh', `${filteredProposals.length} usulan komoditas diekspor ke CSV`);
   };
 
   const handleExportPng = () => {
-    const canvas = renderProposalsToCanvas(filteredProposals);
+    const canvas = renderProposalsToCanvas(filteredProposals, filterSector);
     canvas.toBlob((blob) => {
       if (!blob) return;
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = 'daftar_pengajuan_komoditas_belum_berkode_spdt2026.png';
+      link.download = `usulan_kode_komoditas_${activeFilterSuffix}.png`;
       link.click();
       URL.revokeObjectURL(url);
-      onCopyText('PNG Diunduh', `${filteredProposals.length} komoditas diekspor ke Gambar PNG`);
+      onCopyText('PNG Diunduh', `${filteredProposals.length} usulan komoditas diekspor ke PNG`);
     }, 'image/png');
   };
 
   const handleExportPdf = () => {
-    const canvas = renderProposalsToCanvas(filteredProposals);
+    const canvas = renderProposalsToCanvas(filteredProposals, filterSector);
     const pdfBlob = generatePdfBlobFromCanvas(canvas);
     const url = URL.createObjectURL(pdfBlob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'daftar_pengajuan_komoditas_belum_berkode_spdt2026.pdf';
+    link.download = `usulan_kode_komoditas_${activeFilterSuffix}.pdf`;
     link.click();
     URL.revokeObjectURL(url);
-    onCopyText('PDF Diunduh', `${filteredProposals.length} komoditas diekspor ke Dokumen PDF`);
+    onCopyText('PDF Diunduh', `${filteredProposals.length} usulan komoditas diekspor ke PDF`);
   };
+
+  const activeFilterSectorObj = useMemo(
+    () => (filterSector !== 'ALL' ? SECTOR_OPTIONS.find((s) => s.id === filterSector) : undefined),
+    [filterSector]
+  );
+
+  // Merge recommended units for the active block with general units
+  const unitButtons = useMemo(() => {
+    const rec = currentGroup ? currentGroup.recommendedUnits : [];
+    const combined = [...rec];
+    COMMON_UNITS.forEach((u) => {
+      if (!combined.includes(u)) combined.push(u);
+    });
+    return { recommended: rec, all: combined.slice(0, 14) };
+  }, [currentGroup]);
 
   return (
     <div className="space-y-5 pt-4">
       {/* Top Info & Export Bar */}
       <div className="rounded-lg border border-[#E2E8F0] bg-white p-4 sm:p-5 dark:border-[#1E293B] dark:bg-[#111827]">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
+          <div className="max-w-3xl">
             <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-[#003D7A] dark:text-[#38BDF8]">
-              <span>PENGAJUAN KOMODITAS BELUM BERKODE</span>
+              <span>USULAN KODE KOMODITAS 8 KUESIONER SPDT NTP 2026</span>
               <span>·</span>
               <span className="font-semibold text-[#15803D] dark:text-[#4ADE80]">
                 {isFirebaseConnected
-                  ? 'Sinkronisasi Real-Time Online Aktif'
+                  ? 'Sinkronisasi Real-Time Semua Perangkat Aktif'
                   : 'Mode Penyimpanan Lokal'}
               </span>
             </div>
             <h1 className="mt-1 text-base font-bold text-[#0F172A] sm:text-lg dark:text-[#F8FAFC]">
-              Daftar Usulan Komoditas Baru (Belum Ada Kode di Buku 5)
+              Pengajuan Komoditas Belum Berkode (SPDT26-K, TP, TH, TPR, TRK, IKT, IKB, HTN)
             </h1>
             <p className="mt-0.5 text-xs text-[#64748B] dark:text-[#94A3B8]">
-              Petugas PCL/PML dapat langsung mengentri temuan komoditas lapangan yang belum
-              tercantum di Buku 5 Master Komoditas <strong>tanpa perlu login Admin</strong>.
-              Database utama Buku 5 (2.986 item) tetap murni, sedangkan komoditas usulan tertampung
-              di daftar ini.
+              Petugas PCL & PML dapat langsung mengajukan komoditas lapangan yang belum memiliki kode
+              di Buku 5 untuk <strong>ke-8 kuesioner subsektor</strong> tanpa perlu login Admin.
+              Setiap pilihan Blok otomatis menampilkan <strong>prefix cetakan kode kuesioner</strong>{' '}
+              (misal <code className="tabular-code font-bold">210....</code>,{' '}
+              <code className="tabular-code font-bold">3205...</code>,{' '}
+              <code className="tabular-code font-bold">6203...</code>) dan satuan baku blok terkait.
             </p>
           </div>
 
@@ -667,21 +1410,21 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
               onClick={handleExportCsv}
               className="flex h-9 items-center gap-1.5 rounded-md border border-[#CBD5E1] bg-[#F8FAFC] px-3 text-xs font-bold whitespace-nowrap text-[#0F172A] transition hover:border-[#003D7A] hover:text-[#003D7A] dark:border-[#334155] dark:bg-[#0F172A] dark:text-[#F8FAFC] dark:hover:border-[#38BDF8]"
             >
-              <span>Ekspor CSV</span>
+              <span>Ekspor CSV ({filteredProposals.length})</span>
             </button>
             <button
               type="button"
               onClick={handleExportPng}
               className="flex h-9 items-center gap-1.5 rounded-md border border-[#003D7A] bg-white px-3 text-xs font-bold whitespace-nowrap text-[#003D7A] transition hover:bg-[#EFF6FF] dark:border-[#38BDF8] dark:bg-[#0F172A] dark:text-[#38BDF8] dark:hover:bg-[#1E3A8A]/40"
             >
-              <span>Ekspor PNG</span>
+              <span>Ekspor PNG ({filteredProposals.length})</span>
             </button>
             <button
               type="button"
               onClick={handleExportPdf}
               className="flex h-9 items-center gap-1.5 rounded-md bg-[#003D7A] px-3.5 text-xs font-bold whitespace-nowrap text-white transition hover:bg-[#002D5A] dark:bg-[#0284C7] dark:hover:bg-[#0369A1]"
             >
-              <span>Ekspor PDF</span>
+              <span>Ekspor PDF ({filteredProposals.length})</span>
             </button>
           </div>
         </div>
@@ -689,7 +1432,7 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
 
       {/* Main 2-Column Split: Form on Left (5 cols), Real-Time Table on Right (7 cols) */}
       <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-12">
-        {/* LEFT COLUMN: Open Entry Form (No Admin Login Required) */}
+        {/* LEFT COLUMN: Open Entry Form for All 8 Questionnaires */}
         <form
           onSubmit={handleSubmit}
           className="rounded-lg border border-[#E2E8F0] bg-white p-4 sm:p-5 lg:col-span-5 dark:border-[#1E293B] dark:bg-[#111827]"
@@ -697,14 +1440,14 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
           <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-3 dark:border-[#1E293B]">
             <div>
               <h2 className="text-sm font-bold text-[#0F172A] dark:text-[#F8FAFC]">
-                Form Pengajuan Komoditas Belum Berkode
+                Form Usulan Kode Komoditas per Kuesioner
               </h2>
               <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8]">
                 Terbuka untuk seluruh PCL & PML tanpa login pengelola
               </p>
             </div>
             <span className="tabular-code rounded bg-rose-100 px-2 py-0.5 text-[10px] font-bold text-rose-800 dark:bg-rose-950/60 dark:text-rose-300">
-              BELUM ADA KODE
+              {currentSectorObj.questionnaire}
             </span>
           </div>
 
@@ -715,10 +1458,134 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
           )}
 
           <div className="mt-4 space-y-3.5">
-            {/* 1. Nama Komoditas */}
+            {/* 1. Pilih Kuesioner Subsektor (8 Kuesioner) + Tombol Buka PDF Kuesioner */}
+            <div>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <label className="block text-xs font-bold text-[#0F172A] dark:text-[#F8FAFC]">
+                  1. Pilih Kuesioner Subsektor (8 Kuesioner) *
+                </label>
+                <a
+                  href={`${import.meta.env.BASE_URL}assets/aistudio/${currentSectorObj.pdfFileName}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 rounded border border-[#003D7A]/30 bg-[#EFF6FF] px-2 py-0.5 text-[11px] font-bold text-[#003D7A] transition hover:bg-[#DBEAFE] dark:border-[#38BDF8]/40 dark:bg-[#1E3A8A]/40 dark:text-[#38BDF8]"
+                >
+                  <span>Buka PDF {currentSectorObj.questionnaire} ↗</span>
+                </a>
+              </div>
+
+              {/* 8 Quick Questionnaire Selector Chips */}
+              <div className="mt-1.5 grid grid-cols-4 gap-1.5">
+                {SECTOR_OPTIONS.map((s) => {
+                  const isActive = sector === s.id;
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => setSector(s.id)}
+                      className={`flex flex-col items-start rounded border px-2 py-1.5 text-left transition ${
+                        isActive
+                          ? 'border-[#003D7A] bg-[#003D7A] text-white dark:border-[#0284C7] dark:bg-[#0284C7]'
+                          : 'border-[#E2E8F0] bg-[#F8FAFC] text-[#334155] hover:border-[#CBD5E1] dark:border-[#1E293B] dark:bg-[#0F172A] dark:text-[#CBD5E1]'
+                      }`}
+                    >
+                      <span className="tabular-code text-[10px] font-extrabold">
+                        {s.subsectorNumber === 'K' ? 'K · 01-11' : `Sub ${s.subsectorNumber} · ${s.codeRange}`}
+                      </span>
+                      <span className="truncate text-[10px] font-semibold opacity-95">
+                        {s.questionnaire.replace('SPDT26-', '')}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <select
+                value={sector}
+                onChange={(e) => setSector(e.target.value as ProposedSectorType)}
+                className="mt-1.5 h-9 w-full rounded-md border border-[#CBD5E1] bg-white px-3 text-xs font-semibold text-[#0F172A] focus:border-[#003D7A] focus:outline-none dark:border-[#334155] dark:bg-[#0F172A] dark:text-[#F8FAFC]"
+              >
+                {SECTOR_OPTIONS.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+
+              <p className="mt-1 text-[11px] leading-relaxed text-[#64748B] dark:text-[#94A3B8]">
+                {currentSectorObj.fieldGuideNote}
+              </p>
+            </div>
+
+            {/* 2. Blok & Rincian Kuesioner + Saran Prefix Kode 4 Digit Otomatis */}
             <div>
               <label className="block text-xs font-bold text-[#0F172A] dark:text-[#F8FAFC]">
-                1. Nama Komoditas yang Diajukan *
+                2. Blok & Rincian pada Kuesioner {currentSectorObj.questionnaire} *
+              </label>
+              <select
+                value={selectedGroupIdx}
+                onChange={(e) => handleSelectGroup(Number(e.target.value))}
+                className="mt-1 h-9 w-full rounded-md border border-[#CBD5E1] bg-white px-3 text-xs font-semibold text-[#0F172A] focus:border-[#003D7A] focus:outline-none dark:border-[#334155] dark:bg-[#0F172A] dark:text-[#F8FAFC]"
+              >
+                {availableGroups.map((g, idx) => (
+                  <option key={g.groupCode + idx} value={idx}>
+                    [{g.printedPrefix}] {g.groupLabel}
+                  </option>
+                ))}
+              </select>
+
+              {currentGroup && (
+                <div className="mt-2 rounded-md border border-[#BFDBFE] bg-[#EFF6FF]/70 p-2.5 text-xs dark:border-[#1E3A8A] dark:bg-[#1E3A8A]/25">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-[#0F172A] dark:text-[#F8FAFC]">
+                        Saran Prefix Kode ({currentGroup.blockName}):
+                      </span>
+                      <span className="tabular-code rounded bg-[#003D7A] px-2 py-0.5 text-xs font-extrabold text-white dark:bg-[#0284C7]">
+                        {currentGroup.printedPrefix}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onCopyText(
+                          currentGroup.printedPrefix.replace(/\./g, ''),
+                          `Prefix Kode ${currentGroup.printedPrefix}`
+                        )
+                      }
+                      className="text-[11px] font-bold text-[#003D7A] hover:underline dark:text-[#38BDF8]"
+                    >
+                      Salin Digit Awal
+                    </button>
+                  </div>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-[#334155] dark:text-[#CBD5E1]">
+                    <span>
+                      Kategori:{' '}
+                      <strong className="text-[#003D7A] dark:text-[#38BDF8]">
+                        {currentGroup.category.replace('_', ' ')}
+                      </strong>
+                    </span>
+                    <span>·</span>
+                    <span>
+                      Satuan Baku Blok:{' '}
+                      <strong className="tabular-code">
+                        {currentGroup.recommendedUnits.join(', ')}
+                      </strong>
+                    </span>
+                  </div>
+                  {currentGroup.blockHint && (
+                    <div className="mt-1 text-[10px] text-[#475569] dark:text-[#94A3B8]">
+                      {currentGroup.blockHint}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* 3. Nama Komoditas */}
+            <div>
+              <label className="block text-xs font-bold text-[#0F172A] dark:text-[#F8FAFC]">
+                3. Nama Komoditas yang Diajukan *
               </label>
               <input
                 type="text"
@@ -726,7 +1593,7 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
                 maxLength={160}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Contoh: DAUN KRATOM / BUAH TIN / PUPUK HAYATI CAIR..."
+                placeholder="Contoh: DAUN KRATOM / PUPUK HAYATI CAIR / IKAN LOKAL..."
                 className="mt-1 h-9 w-full rounded-md border border-[#CBD5E1] bg-white px-3 text-xs font-semibold uppercase text-[#0F172A] placeholder:normal-case placeholder:text-[#94A3B8] focus:border-[#003D7A] focus:outline-none dark:border-[#334155] dark:bg-[#0F172A] dark:text-[#F8FAFC] dark:focus:border-[#38BDF8]"
               />
 
@@ -738,46 +1605,56 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
                     ADA KODE di Buku 5!
                   </div>
                   <p className="mt-0.5 text-[11px] text-amber-800 dark:text-amber-200/90">
-                    Pastikan komoditas yang Anda ajukan bukan salah satu dari kode resmi Buku 5
+                    Periksa apakah komoditas yang Anda maksud sudah memiliki kode resmi Buku 5
                     berikut:
                   </p>
                   <div className="mt-2 space-y-1.5">
-                    {matchingBuku5Items.map((m) => (
-                      <div
-                        key={m.code}
-                        className="flex items-center justify-between gap-2 rounded border border-amber-200 bg-white px-2.5 py-1.5 dark:border-amber-900 dark:bg-[#111827]"
-                      >
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="tabular-code font-bold text-[#003D7A] dark:text-[#38BDF8]">
-                              {m.code}
-                            </span>
-                            <span className="truncate font-bold text-[#0F172A] dark:text-[#F8FAFC]">
-                              {m.name}
-                            </span>
-                          </div>
-                          <div className="text-[10px] text-[#64748B] dark:text-[#94A3B8]">
-                            Satuan: {m.unit} · {m.questionnaireCode} ({m.groupName})
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => onCopyText(m.code, `${m.code} - ${m.name}`)}
-                          className="shrink-0 rounded bg-[#003D7A] px-2 py-1 text-[10px] font-bold text-white hover:bg-[#002D5A] dark:bg-[#0284C7]"
+                    {matchingBuku5Items.map((m) => {
+                      const isSameSubsector = currentSectorObj.codePrefixes.some((pref) =>
+                        m.code.startsWith(pref)
+                      );
+                      return (
+                        <div
+                          key={m.code}
+                          className="flex items-center justify-between gap-2 rounded border border-amber-200 bg-white px-2.5 py-1.5 dark:border-amber-900 dark:bg-[#111827]"
                         >
-                          Pakai Kode Ini
-                        </button>
-                      </div>
-                    ))}
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className="tabular-code font-bold text-[#003D7A] dark:text-[#38BDF8]">
+                                {m.code}
+                              </span>
+                              {isSameSubsector && (
+                                <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300">
+                                  Sesuai {currentSectorObj.questionnaire}
+                                </span>
+                              )}
+                              <span className="truncate font-bold text-[#0F172A] dark:text-[#F8FAFC]">
+                                {m.name}
+                              </span>
+                            </div>
+                            <div className="text-[10px] text-[#64748B] dark:text-[#94A3B8]">
+                              Satuan: {m.unit} · {m.questionnaireCode} ({m.groupName})
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => onCopyText(m.code, `${m.code} - ${m.name}`)}
+                            className="shrink-0 rounded bg-[#003D7A] px-2 py-1 text-[10px] font-bold text-white hover:bg-[#002D5A] dark:bg-[#0284C7]"
+                          >
+                            Pakai Kode Ini
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
             </div>
 
-            {/* 2. Satuan Standar */}
+            {/* 4. Satuan Standar (Prioritaskan Satuan Baku Blok Kuesioner) */}
             <div>
               <label className="block text-xs font-bold text-[#0F172A] dark:text-[#F8FAFC]">
-                2. Satuan Standar Lapangan *
+                4. Satuan Standar sesuai Blok Kuesioner *
               </label>
               <input
                 type="text"
@@ -785,70 +1662,31 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
                 maxLength={40}
                 value={unit}
                 onChange={(e) => setUnit(e.target.value)}
-                placeholder="Contoh: KG, IKAT, BUNGKUS, LITER..."
+                placeholder="Contoh: KG, IKAT, LITER, BATANG, M3, HOK..."
                 className="tabular-code mt-1 h-9 w-full rounded-md border border-[#CBD5E1] bg-white px-3 text-xs font-bold uppercase text-[#0F172A] focus:border-[#003D7A] focus:outline-none dark:border-[#334155] dark:bg-[#0F172A] dark:text-[#F8FAFC]"
               />
               <div className="mt-1.5 flex flex-wrap gap-1">
-                {COMMON_UNITS.map((u) => (
-                  <button
-                    key={u}
-                    type="button"
-                    onClick={() => setUnit(u)}
-                    className={`tabular-code rounded border px-2 py-0.5 text-[10px] font-bold transition ${
-                      unit.toUpperCase() === u
-                        ? 'border-[#003D7A] bg-[#003D7A] text-white dark:border-[#0284C7] dark:bg-[#0284C7]'
-                        : 'border-[#E2E8F0] bg-[#F8FAFC] text-[#475569] hover:border-[#CBD5E1] dark:border-[#1E293B] dark:bg-[#0F172A] dark:text-[#94A3B8]'
-                    }`}
-                  >
-                    {u}
-                  </button>
-                ))}
+                {unitButtons.all.map((u) => {
+                  const isRecommended = unitButtons.recommended.includes(u);
+                  const isSelected = unit.toUpperCase() === u;
+                  return (
+                    <button
+                      key={u}
+                      type="button"
+                      onClick={() => setUnit(u)}
+                      className={`tabular-code rounded border px-2 py-0.5 text-[10px] font-bold transition ${
+                        isSelected
+                          ? 'border-[#003D7A] bg-[#003D7A] text-white dark:border-[#0284C7] dark:bg-[#0284C7]'
+                          : isRecommended
+                            ? 'border-[#93C5FD] bg-[#EFF6FF] text-[#003D7A] hover:border-[#003D7A] dark:border-[#1E3A8A] dark:bg-[#1E3A8A]/30 dark:text-[#38BDF8]'
+                            : 'border-[#E2E8F0] bg-[#F8FAFC] text-[#475569] hover:border-[#CBD5E1] dark:border-[#1E293B] dark:bg-[#0F172A] dark:text-[#94A3B8]'
+                      }`}
+                    >
+                      {u}
+                    </button>
+                  );
+                })}
               </div>
-            </div>
-
-            {/* 3. Subsektor / Kuesioner */}
-            <div>
-              <label className="block text-xs font-bold text-[#0F172A] dark:text-[#F8FAFC]">
-                3. Kuesioner / Subsektor (01–11 s.d. 81–82) *
-              </label>
-              <select
-                value={sector}
-                onChange={(e) => setSector(e.target.value as ProposedSectorType)}
-                className="mt-1 h-9 w-full rounded-md border border-[#CBD5E1] bg-white px-3 text-xs font-semibold text-[#0F172A] focus:border-[#003D7A] focus:outline-none dark:border-[#334155] dark:bg-[#0F172A] dark:text-[#F8FAFC]"
-              >
-                {SECTOR_OPTIONS.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* 4. Kelompok / Subkelompok Spesifik */}
-            <div>
-              <label className="block text-xs font-bold text-[#0F172A] dark:text-[#F8FAFC]">
-                4. Kelompok / Subkelompok di Kuesioner *
-              </label>
-              <select
-                value={selectedGroupIdx}
-                onChange={(e) => setSelectedGroupIdx(Number(e.target.value))}
-                className="mt-1 h-9 w-full rounded-md border border-[#CBD5E1] bg-white px-3 text-xs font-semibold text-[#0F172A] focus:border-[#003D7A] focus:outline-none dark:border-[#334155] dark:bg-[#0F172A] dark:text-[#F8FAFC]"
-              >
-                {availableGroups.map((g, idx) => (
-                  <option key={g.groupCode + idx} value={idx}>
-                    [{g.groupCode}] {g.groupLabel} ({g.category.replace('_', ' ')})
-                  </option>
-                ))}
-              </select>
-              {currentGroup && (
-                <div className="mt-1 text-[11px] text-[#64748B] dark:text-[#94A3B8]">
-                  Kategori teridentifikasi:{' '}
-                  <strong className="text-[#003D7A] dark:text-[#38BDF8]">
-                    {currentGroup.category.replace('_', ' ')}
-                  </strong>{' '}
-                  · Kode Kelompok: <strong className="tabular-code">{currentGroup.groupCode}</strong>
-                </div>
-              )}
             </div>
 
             {/* 5. Petugas Pengaju */}
@@ -883,14 +1721,14 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
             {/* 6. Catatan / Keterangan Lapangan */}
             <div>
               <label className="block text-xs font-bold text-[#0F172A] dark:text-[#F8FAFC]">
-                6. Catatan / Keterangan Lapangan (Opsional)
+                6. Catatan / Rincian Halaman Kuesioner (Opsional)
               </label>
               <textarea
                 rows={2}
                 maxLength={400}
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                placeholder="Contoh: Ditemukan pada sampel RT perkebunan di Blok V.1, belum ada di Buku 5..."
+                placeholder={`Contoh: Ditemukan pada sampel ${currentSectorObj.questionnaire} ${currentGroup?.blockName || ''}, nama lokal daerah...`}
                 className="mt-1 w-full rounded-md border border-[#CBD5E1] bg-white p-2.5 text-xs font-medium text-[#0F172A] focus:border-[#003D7A] focus:outline-none dark:border-[#334155] dark:bg-[#0F172A] dark:text-[#F8FAFC]"
               />
             </div>
@@ -901,21 +1739,33 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
               className="flex h-10 w-full items-center justify-center rounded-md bg-[#003D7A] px-4 text-xs font-bold text-white transition hover:bg-[#002D5A] disabled:opacity-50 dark:bg-[#0284C7] dark:hover:bg-[#0369A1]"
             >
               {isSubmitting
-                ? 'Menyimpan ke Daftar Pengajuan...'
-                : '+ Simpan ke Daftar Pengajuan Komoditas (Belum Ada Kode)'}
+                ? 'Menyimpan Usulan Komoditas...'
+                : `+ Ajukan Komoditas ke ${currentSectorObj.questionnaire} (Prefix ${currentGroup?.printedPrefix || ''})`}
             </button>
           </div>
         </form>
 
-        {/* RIGHT COLUMN: Real-Time Proposed Commodities List */}
+        {/* RIGHT COLUMN: Real-Time Proposed Commodities List Filtered per Questionnaire */}
         <div className="space-y-4 lg:col-span-7">
           {/* Filter & Search Bar (Flex-wrap, zero horizontal scrollbar) */}
           <div className="rounded-lg border border-[#E2E8F0] bg-white p-4 dark:border-[#1E293B] dark:bg-[#111827]">
             <div className="flex flex-wrap items-center justify-between gap-2 pb-3">
-              <span className="text-xs font-bold text-[#0F172A] dark:text-[#F8FAFC]">
-                Daftar Komoditas Belum Ada Kode ({filteredProposals.length} dari {proposals.length})
-              </span>
-              { (filterSector !== 'ALL' || filterCategory !== 'ALL' || searchQuery) && (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-bold text-[#0F172A] dark:text-[#F8FAFC]">
+                  Daftar Usulan per Kuesioner ({filteredProposals.length} dari {proposals.length})
+                </span>
+                {activeFilterSectorObj && (
+                  <a
+                    href={`${import.meta.env.BASE_URL}assets/aistudio/${activeFilterSectorObj.pdfFileName}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 rounded border border-[#003D7A]/30 bg-[#EFF6FF] px-2 py-0.5 text-[11px] font-bold text-[#003D7A] hover:bg-[#DBEAFE] dark:border-[#38BDF8]/40 dark:bg-[#1E3A8A]/40 dark:text-[#38BDF8]"
+                  >
+                    <span>Lihat PDF {activeFilterSectorObj.questionnaire} ↗</span>
+                  </a>
+                )}
+              </div>
+              {(filterSector !== 'ALL' || filterCategory !== 'ALL' || searchQuery) && (
                 <button
                   type="button"
                   onClick={() => {
@@ -934,37 +1784,12 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cari nama komoditas usulan, kode kelompok (misal 01.1.7), atau nama petugas..."
+              placeholder="Cari nama komoditas usulan, prefix kode (misal 210, 3205, 6203), blok, atau nama petugas..."
               className="h-9 w-full rounded-md border border-[#CBD5E1] bg-[#F8FAFC] px-3 text-xs font-medium text-[#0F172A] focus:border-[#003D7A] focus:bg-white focus:outline-none dark:border-[#334155] dark:bg-[#0F172A] dark:text-[#F8FAFC]"
             />
 
-            {/* Category Filter Buttons (Flex-wrap) */}
+            {/* Per-Questionnaire Filter Tabs (All 8 Questionnaires with counts) */}
             <div className="mt-2.5 flex flex-wrap gap-1.5">
-              {(
-                [
-                  { id: 'ALL', label: 'Semua Kategori' },
-                  { id: 'KONSUMSI', label: 'Konsumsi RT' },
-                  { id: 'PRODUKSI', label: 'Produksi' },
-                  { id: 'BIAYA_PRODUKSI', label: 'Biaya Produksi' },
-                ] as const
-              ).map((cat) => (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => setFilterCategory(cat.id)}
-                  className={`h-7 rounded border px-2.5 text-[11px] font-semibold whitespace-nowrap transition ${
-                    filterCategory === cat.id
-                      ? 'border-[#003D7A] bg-[#003D7A] text-white dark:border-[#0284C7] dark:bg-[#0284C7]'
-                      : 'border-[#E2E8F0] bg-[#F8FAFC] text-[#475569] hover:text-[#0F172A] dark:border-[#1E293B] dark:bg-[#0F172A] dark:text-[#94A3B8]'
-                  }`}
-                >
-                  {cat.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Subsector Filter Buttons (Flex-wrap) */}
-            <div className="mt-2 flex flex-wrap gap-1.5">
               <button
                 type="button"
                 onClick={() => setFilterSector('ALL')}
@@ -974,20 +1799,48 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
                     : 'border-[#E2E8F0] bg-white text-[#64748B] hover:text-[#0F172A] dark:border-[#1E293B] dark:bg-[#111827] dark:text-[#94A3B8]'
                 }`}
               >
-                Semua Subsektor
+                Semua 8 Kuesioner ({proposalCountsBySector.ALL || 0})
               </button>
-              {SECTOR_OPTIONS.map((sec) => (
+              {SECTOR_OPTIONS.map((sec) => {
+                const count = proposalCountsBySector[sec.id] || 0;
+                return (
+                  <button
+                    key={sec.id}
+                    type="button"
+                    onClick={() => setFilterSector(sec.id)}
+                    className={`h-7 rounded border px-2.5 text-[11px] font-semibold whitespace-nowrap transition ${
+                      filterSector === sec.id
+                        ? 'border-[#003D7A] bg-[#003D7A] text-white dark:border-[#0284C7] dark:bg-[#0284C7]'
+                        : 'border-[#E2E8F0] bg-white text-[#475569] hover:text-[#0F172A] dark:border-[#1E293B] dark:bg-[#111827] dark:text-[#94A3B8]'
+                    }`}
+                  >
+                    {sec.subsectorNumber}·{sec.questionnaire.replace('SPDT26-', '')} ({count})
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Category Filter Buttons (Flex-wrap) */}
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {(
+                [
+                  { id: 'ALL', label: 'Semua Kategori Blok' },
+                  { id: 'KONSUMSI', label: 'Blok V/VI Konsumsi RT' },
+                  { id: 'PRODUKSI', label: 'Blok III/IV Produksi' },
+                  { id: 'BIAYA_PRODUKSI', label: 'Blok IV/V Biaya Produksi (A–F)' },
+                ] as const
+              ).map((cat) => (
                 <button
-                  key={sec.id}
+                  key={cat.id}
                   type="button"
-                  onClick={() => setFilterSector(sec.id)}
+                  onClick={() => setFilterCategory(cat.id)}
                   className={`h-7 rounded border px-2.5 text-[11px] font-semibold whitespace-nowrap transition ${
-                    filterSector === sec.id
-                      ? 'border-[#0F172A] bg-[#0F172A] text-white dark:border-[#38BDF8] dark:bg-[#38BDF8] dark:text-[#0F172A]'
-                      : 'border-[#E2E8F0] bg-white text-[#64748B] hover:text-[#0F172A] dark:border-[#1E293B] dark:bg-[#111827] dark:text-[#94A3B8]'
+                    filterCategory === cat.id
+                      ? 'border-[#003D7A] bg-[#EFF6FF] text-[#003D7A] dark:border-[#38BDF8] dark:bg-[#1E3A8A]/40 dark:text-[#38BDF8]'
+                      : 'border-[#E2E8F0] bg-[#F8FAFC] text-[#64748B] hover:text-[#0F172A] dark:border-[#1E293B] dark:bg-[#0F172A] dark:text-[#94A3B8]'
                   }`}
                 >
-                  {sec.codeRange} {sec.questionnaire}
+                  {cat.label}
                 </button>
               ))}
             </div>
@@ -997,11 +1850,11 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
           {filteredProposals.length === 0 ? (
             <div className="rounded-lg border border-[#E2E8F0] bg-white p-8 text-center dark:border-[#1E293B] dark:bg-[#111827]">
               <p className="text-sm font-bold text-[#0F172A] dark:text-[#F8FAFC]">
-                Belum ada pengajuan komoditas tanpa kode pada filter ini
+                Belum ada usulan kode komoditas pada filter kuesioner ini
               </p>
               <p className="mt-1 text-xs text-[#64748B] dark:text-[#94A3B8]">
-                Gunakan formulir di sebelah kiri untuk mengentri komoditas lapangan yang belum
-                memiliki kode di Buku 5 Master Komoditas.
+                Pilih kuesioner di formulir sebelah kiri (SPDT26-K, TP, TH, TPR, TRK, IKT, IKB, atau
+                HTN) untuk mengajukan komoditas lapangan yang belum memiliki kode di Buku 5.
               </p>
             </div>
           ) : (
@@ -1009,6 +1862,7 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
               <div className="divide-y divide-[#E2E8F0] dark:divide-[#1E293B]">
                 {filteredProposals.map((item, idx) => {
                   const secObj = SECTOR_OPTIONS.find((s) => s.id === item.sector);
+                  const printedPrefix = getPrintedPrefixForProposal(item);
                   const isReviewed = item.status === 'DITINJAU_PML';
                   const dateStr = new Date(item.createdAtMs).toLocaleString('id-ID', {
                     day: '2-digit',
@@ -1024,7 +1878,7 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
                       className="flex flex-col justify-between gap-3 p-4 transition hover:bg-[#F8FAFC] sm:flex-row sm:items-start dark:hover:bg-[#0F172A]/60"
                     >
                       <div className="min-w-0 flex-1">
-                        {/* Top status & location row */}
+                        {/* Top status, questionnaire & printed prefix row */}
                         <div className="flex flex-wrap items-center gap-2 text-xs">
                           <span className="tabular-code font-bold text-[#64748B]">
                             #{String(idx + 1).padStart(2, '0')}
@@ -1038,14 +1892,26 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
                           >
                             {isReviewed ? 'DITINJAU PML' : 'BELUM ADA KODE'}
                           </span>
+                          <span
+                            title="Prefix Kode Cetakan Kuesioner (Kolom Diisi Pengawas)"
+                            className="tabular-code rounded border border-[#93C5FD] bg-[#EFF6FF] px-2 py-0.5 text-[11px] font-extrabold text-[#003D7A] dark:border-[#1E3A8A] dark:bg-[#1E3A8A]/40 dark:text-[#38BDF8]"
+                          >
+                            Prefix: {printedPrefix}
+                          </span>
                           <span className="text-[#CBD5E1] dark:text-[#334155]">·</span>
                           <span className="font-bold text-[#003D7A] dark:text-[#38BDF8]">
                             {secObj ? secObj.shortLabel : item.sector}
                           </span>
-                          <span className="text-[#CBD5E1] dark:text-[#334155]">·</span>
-                          <span className="font-semibold text-[#475569] dark:text-[#94A3B8]">
-                            {item.category.replace('_', ' ')}
-                          </span>
+                          {secObj && (
+                            <a
+                              href={`${import.meta.env.BASE_URL}assets/aistudio/${secObj.pdfFileName}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[11px] font-semibold text-[#64748B] underline hover:text-[#003D7A] dark:text-[#94A3B8] dark:hover:text-[#38BDF8]"
+                            >
+                              PDF {secObj.questionnaire} ↗
+                            </a>
+                          )}
                         </div>
 
                         {/* Commodity Name & Unit */}
@@ -1058,9 +1924,9 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
                           </span>
                         </div>
 
-                        {/* Specific Group / Subgroup Location */}
+                        {/* Specific Block / Subgroup Location */}
                         <div className="mt-1 text-xs font-semibold text-[#334155] dark:text-[#CBD5E1]">
-                          Kelompok Kuesioner:{' '}
+                          Blok / Rincian:{' '}
                           <span className="tabular-code font-bold text-[#0F172A] dark:text-[#F8FAFC]">
                             [{item.groupCode}]
                           </span>{' '}
@@ -1102,7 +1968,7 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
                             type="button"
                             onClick={() =>
                               onCopyText(
-                                `[BELUM ADA KODE] ${item.name} (${item.unit}) - ${secObj?.shortLabel || item.sector} | Kelompok [${item.groupCode}] ${item.groupLabel} | Pengaju: ${item.officerCode} ${item.officerName}`,
+                                `[USULAN ${secObj?.questionnaire || item.sector} | Prefix ${printedPrefix}] ${item.name} (${item.unit}) — ${item.groupLabel} | Pengaju: ${item.officerCode} ${item.officerName}`,
                                 `Usulan ${item.name}`
                               )
                             }
