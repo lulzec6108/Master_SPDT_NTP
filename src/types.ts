@@ -55,3 +55,29 @@ export interface PmlChecklistRule {
   severity: 'WAJIB' | 'KONSISTENSI' | 'KEWAJARAN';
   crossCheckHint?: string;
 }
+
+export type ProposedSectorType =
+  | 'KONSUMSI'
+  | 'TANAMAN_PANGAN'
+  | 'HORTIKULTURA'
+  | 'PERKEBUNAN'
+  | 'PETERNAKAN'
+  | 'PERIKANAN_TANGKAP'
+  | 'PERIKANAN_BUDIDAYA'
+  | 'KEHUTANAN';
+
+export interface ProposedCommodityItem {
+  id: string;
+  name: string;
+  unit: string;
+  sector: ProposedSectorType;
+  category: CategoryType;
+  groupCode: string;
+  groupLabel: string;
+  officerCode: string;
+  officerName: string;
+  note: string;
+  status: 'BELUM_ADA_KODE' | 'DITINJAU_PML';
+  createdAtMs: number;
+}
+

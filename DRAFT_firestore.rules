@@ -1,0 +1,99 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidProposedCommodity(data) {
+      return data.keys().hasAll([
+          'name',
+          'unit',
+          'sector',
+          'category',
+          'groupCode',
+          'groupLabel',
+          'officerCode',
+          'officerName',
+          'note',
+          'status',
+          'createdAtMs'
+        ])
+        && data.keys().hasOnly([
+          'name',
+          'unit',
+          'sector',
+          'category',
+          'groupCode',
+          'groupLabel',
+          'officerCode',
+          'officerName',
+          'note',
+          'status',
+          'createdAtMs'
+        ])
+        && data.name is string && data.name.size() >= 2 && data.name.size() <= 160
+        && data.unit is string && data.unit.size() >= 1 && data.unit.size() <= 40
+        && data.sector is string && data.sector in [
+          'KONSUMSI',
+          'TANAMAN_PANGAN',
+          'HORTIKULTURA',
+          'PERKEBUNAN',
+          'PETERNAKAN',
+          'PERIKANAN_TANGKAP',
+          'PERIKANAN_BUDIDAYA',
+          'KEHUTANAN'
+        ]
+        && data.category is string && data.category in ['KONSUMSI', 'PRODUKSI', 'BIAYA_PRODUKSI']
+        && data.groupCode is string && data.groupCode.size() >= 2 && data.groupCode.size() <= 40
+        && data.groupLabel is string && data.groupLabel.size() >= 2 && data.groupLabel.size() <= 160
+        && data.officerCode is string && data.officerCode.size() >= 2 && data.officerCode.size() <= 16
+        && data.officerName is string && data.officerName.size() >= 1 && data.officerName.size() <= 120
+        && data.note is string && data.note.size() >= 0 && data.note.size() <= 400
+        && data.status is string && data.status in ['BELUM_ADA_KODE', 'DITINJAU_PML']
+        && data.createdAtMs is number && data.createdAtMs > 0;
+    }
+
+    // Connection test endpoint for startup testConnection()
+    match /test/connection {
+      allow get: if true;
+    }
+
+    // Open field-officer proposal registry (no Admin login required per user requirement)
+    match /proposed_commodities/{proposalId} {
+      allow get: if isValidId(proposalId);
+      allow list: if resource.data.status in ['BELUM_ADA_KODE', 'DITINJAU_PML'];
+      allow create: if isValidId(proposalId) && isValidProposedCommodity(incoming());
+      allow update: if isValidId(proposalId)
+        && isValidProposedCommodity(incoming())
+        && incoming().createdAtMs == existing().createdAtMs
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'name',
+          'unit',
+          'sector',
+          'category',
+          'groupCode',
+          'groupLabel',
+          'officerCode',
+          'officerName',
+          'note',
+          'status'
+        ]);
+      allow delete: if isValidId(proposalId);
+    }
+  }
+}

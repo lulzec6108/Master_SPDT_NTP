@@ -5,6 +5,7 @@ interface LocalAssistantTabProps {
   commodities: CommodityItem[];
   officers: OfficerItem[];
   onCopyCode: (code: string, label: string) => void;
+  onProposeNewCommodity?: (draftName: string) => void;
 }
 
 interface MissingScenario {
@@ -149,6 +150,7 @@ export const LocalAssistantTab: React.FC<LocalAssistantTabProps> = ({
   commodities,
   officers,
   onCopyCode,
+  onProposeNewCommodity,
 }) => {
   const [query, setQuery] = useState('');
   const [selectedScenarioIds, setSelectedScenarioIds] = useState<string[]>([
@@ -280,8 +282,19 @@ export const LocalAssistantTab: React.FC<LocalAssistantTabProps> = ({
                 Tidak ditemukan kode di Buku 5 untuk &ldquo;{query}&rdquo;
               </p>
               <p className="mt-1 text-xs text-[#64748B] dark:text-[#94A3B8]">
-                Database hanya memuat komoditas resmi dari Buku 5 Master Komoditas SPDT NTP 2026.
+                Database hanya memuat komoditas resmi dari Buku 5 Master Komoditas SPDT NTP 2026. Jika komoditas belum ada kodenya di Buku 5, catat ke daftar Pengajuan Kode.
               </p>
+              {onProposeNewCommodity && (
+                <div className="mt-4 flex justify-center">
+                  <button
+                    type="button"
+                    onClick={() => onProposeNewCommodity(query.trim().toUpperCase())}
+                    className="inline-flex h-9 items-center gap-2 rounded-md bg-[#003D7A] px-4 text-xs font-semibold text-white transition hover:bg-[#002D5A] dark:bg-[#0284C7] dark:hover:bg-[#0369A1]"
+                  >
+                    <span>+ Ajukan &ldquo;{query.trim().toUpperCase()}&rdquo; (Belum Ada Kode)</span>
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <>

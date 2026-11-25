@@ -17,18 +17,19 @@ interface CommodityTabProps {
   selectedGroup: FilterGroup;
   onSelectGroup: (group: FilterGroup) => void;
   onOpenSidebar: () => void;
+  onProposeNewCommodity?: (draftName: string) => void;
 }
 
 export const SECTOR_FILTERS: { id: SectorId; codePrefix: string; label: string; shortLabel: string }[] = [
   { id: 'ALL', codePrefix: '01–82', label: 'Semua Sektor', shortLabel: 'Semua' },
   { id: '1_KONSUMSI', codePrefix: '01–11', label: 'Konsumsi RT', shortLabel: 'Konsumsi' },
-  { id: '2_TP', codePrefix: '21–22', label: 'Tanaman Pangan', shortLabel: 'Pangan' },
-  { id: '3_TH', codePrefix: '31–32', label: 'Hortikultura', shortLabel: 'Horti' },
-  { id: '4_TPR', codePrefix: '41–42', label: 'Perkebunan', shortLabel: 'Kebun' },
-  { id: '5_TRK', codePrefix: '51–52', label: 'Peternakan', shortLabel: 'Ternak' },
-  { id: '6_IKT', codePrefix: '61–62', label: 'Perikanan Tangkap', shortLabel: 'Tangkap' },
-  { id: '7_IKB', codePrefix: '71–72', label: 'Perikanan Budidaya', shortLabel: 'Budidaya' },
-  { id: '8_HTN', codePrefix: '81–82', label: 'Kehutanan', shortLabel: 'Hutan' },
+  { id: '2_TP', codePrefix: '1 · 21–22', label: 'Tanaman Pangan', shortLabel: '1. Pangan' },
+  { id: '3_TH', codePrefix: '2 · 31–32', label: 'Tanaman Hortikultura', shortLabel: '2. Horti' },
+  { id: '4_TPR', codePrefix: '3 · 41–42', label: 'Perkebunan Rakyat', shortLabel: '3. Kebun' },
+  { id: '5_TRK', codePrefix: '4 · 51–52', label: 'Peternakan', shortLabel: '4. Ternak' },
+  { id: '6_IKT', codePrefix: '5 · 61–62', label: 'Perikanan Tangkap', shortLabel: '5. Tangkap' },
+  { id: '7_IKB', codePrefix: '6 · 71–72', label: 'Perikanan Budidaya', shortLabel: '6. Budidaya' },
+  { id: '8_HTN', codePrefix: '7 · 81–82', label: 'Kehutanan', shortLabel: '7. Hutan' },
 ];
 
 export const CommodityTab: React.FC<CommodityTabProps> = ({
@@ -45,6 +46,7 @@ export const CommodityTab: React.FC<CommodityTabProps> = ({
   selectedGroup,
   onSelectGroup,
   onOpenSidebar,
+  onProposeNewCommodity,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
@@ -261,13 +263,24 @@ export const CommodityTab: React.FC<CommodityTabProps> = ({
       {/* SCROLLABLE STRUCTURED DATA DIRECTORY */}
       <div className="mt-4">
         {filteredCommodities.length === 0 ? (
-          <div className="rounded-lg border border-[#E2E8F0] bg-white p-12 text-center dark:border-[#1E293B] dark:bg-[#111827]">
+          <div className="rounded-lg border border-[#E2E8F0] bg-white p-10 text-center dark:border-[#1E293B] dark:bg-[#111827]">
             <p className="text-sm font-semibold text-[#0F172A] dark:text-[#F8FAFC]">
-              Tidak ditemukan komoditas yang sesuai
+              Tidak ditemukan komoditas yang sesuai di Buku 5 Master Komoditas
             </p>
             <p className="mt-1 text-xs text-[#64748B] dark:text-[#94A3B8]">
-              Pastikan kata kunci sesuai dengan Buku 5 Master Komoditas SPDT NTP 2026.
+              Jika komoditas ditemukan di lapangan namun belum memiliki kode 7-digit di Buku 5, silakan ajukan ke daftar komoditas belum berkode.
             </p>
+            {onProposeNewCommodity && (
+              <div className="mt-4 flex justify-center">
+                <button
+                  type="button"
+                  onClick={() => onProposeNewCommodity(searchQuery.trim().toUpperCase())}
+                  className="inline-flex h-9 items-center gap-2 rounded-md bg-[#003D7A] px-4 text-xs font-semibold text-white transition hover:bg-[#002D5A] dark:bg-[#0284C7] dark:hover:bg-[#0369A1]"
+                >
+                  <span>+ Ajukan{searchQuery.trim() ? ` "${searchQuery.trim().toUpperCase()}"` : ' Komoditas Baru'} (Belum Ada Kode)</span>
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <div className="overflow-hidden rounded-lg border border-[#E2E8F0] bg-white dark:border-[#1E293B] dark:bg-[#111827]">

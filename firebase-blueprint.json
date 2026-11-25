@@ -1,0 +1,259 @@
+{
+  "entities": {
+    "ProposedCommodity": {
+      "title": "ProposedCommodity",
+      "description": "Daftar pengajuan komoditas baru dari lapangan yang belum memiliki kode 7 digit di Buku 5 Master Komoditas SPDT NTP 2026.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID unik pengajuan komoditas.",
+          "minLength": 2,
+          "maxLength": 128
+        },
+        "name": {
+          "type": "string",
+          "description": "Nama komoditas yang diajukan (HURUF KAPITAL).",
+          "minLength": 2,
+          "maxLength": 160
+        },
+        "unit": {
+          "type": "string",
+          "description": "Satuan standar lapangan (misal KG, IKAT, BUNGKUS, LITER, BUTIR).",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "sector": {
+          "type": "string",
+          "description": "Kode subsektor/kuesioner SPDT NTP 2026.",
+          "enum": [
+            "KONSUMSI",
+            "TANAMAN_PANGAN",
+            "HORTIKULTURA",
+            "PERKEBUNAN",
+            "PETERNAKAN",
+            "PERIKANAN_TANGKAP",
+            "PERIKANAN_BUDIDAYA",
+            "KEHUTANAN"
+          ],
+          "minLength": 2,
+          "maxLength": 32
+        },
+        "category": {
+          "type": "string",
+          "description": "Kategori utama komoditas (KONSUMSI, PRODUKSI, atau BIAYA_PRODUKSI).",
+          "enum": ["KONSUMSI", "PRODUKSI", "BIAYA_PRODUKSI"],
+          "minLength": 2,
+          "maxLength": 32
+        },
+        "groupCode": {
+          "type": "string",
+          "description": "Kode kelompok/subkelompok kuesioner tempat komoditas berada (misal 01.1.7, 11.1.2, 2101, 4202).",
+          "minLength": 2,
+          "maxLength": 40
+        },
+        "groupLabel": {
+          "type": "string",
+          "description": "Nama kelompok/subkelompok kuesioner tempat komoditas berada.",
+          "minLength": 2,
+          "maxLength": 160
+        },
+        "officerCode": {
+          "type": "string",
+          "description": "Kode 3 digit petugas pengaju (001-045) atau UMUM.",
+          "minLength": 2,
+          "maxLength": 16
+        },
+        "officerName": {
+          "type": "string",
+          "description": "Nama petugas pengaju.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "notes": {
+          "type": "string",
+          "description": "Catatan lapangan, deskripsi komoditas, atau alasan pengajuan.",
+          "minLength": 0,
+          "maxLength": 400
+        },
+        "status": {
+          "type": "string",
+          "description": "Status pengajuan kode komoditas.",
+          "enum": ["BELUM_ADA_KODE", "DITINJAU_PML"],
+          "minLength": 2,
+          "maxLength": 32
+        },
+        "createdAtMs": {
+          "type": "number",
+          "description": "Waktu pengajuan dalam epoch milliseconds."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "unit",
+        "sector",
+        "category",
+        "groupCode",
+        "groupLabel",
+        "officerCode",
+        "officerName",
+        "notes",
+        "status",
+        "createdAtMs"
+      ]
+    },
+    "CustomCommodityOverride": {
+      "title": "CustomCommodityOverride",
+      "description": "Sinkronisasi multi-perangkat untuk komoditas yang ditambah, diedit, atau dihapus oleh Admin.",
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 16
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "plantUnit": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 60
+        },
+        "groupCode": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "groupName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "sectorId": {
+          "type": "string",
+          "enum": [
+            "1_KONSUMSI",
+            "2_TP",
+            "3_TH",
+            "4_TPR",
+            "5_TRK",
+            "6_IKT",
+            "7_IKB",
+            "8_HTN"
+          ]
+        },
+        "sectorName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "questionnaireCode": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "categoryType": {
+          "type": "string",
+          "enum": ["KONSUMSI", "PRODUKSI", "BIAYA_PRODUKSI"]
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 400
+        },
+        "action": {
+          "type": "string",
+          "enum": ["UPSERT", "DELETE"]
+        },
+        "updatedAtMs": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "code",
+        "name",
+        "unit",
+        "plantUnit",
+        "groupCode",
+        "groupName",
+        "sectorId",
+        "sectorName",
+        "questionnaireCode",
+        "categoryType",
+        "notes",
+        "action",
+        "updatedAtMs"
+      ]
+    },
+    "CustomOfficerOverride": {
+      "title": "CustomOfficerOverride",
+      "description": "Sinkronisasi multi-perangkat untuk Kode Petugas 3-digit yang ditambah, diedit, atau dihapus oleh Admin.",
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 16
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "role": {
+          "type": "string",
+          "enum": ["PCL", "PML"]
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 300
+        },
+        "action": {
+          "type": "string",
+          "enum": ["UPSERT", "DELETE"]
+        },
+        "updatedAtMs": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "code",
+        "name",
+        "role",
+        "notes",
+        "action",
+        "updatedAtMs"
+      ]
+    }
+  },
+  "firestore": {
+    "/proposed_commodities/{proposalId}": {
+      "schema": {
+        "$ref": "#/entities/ProposedCommodity"
+      },
+      "description": "Koleksi real-time daftar komoditas yang diajukan oleh petugas PCL/PML karena belum memiliki kode di Buku 5 Master Komoditas."
+    },
+    "/custom_commodities/{commodityCode}": {
+      "schema": {
+        "$ref": "#/entities/CustomCommodityOverride"
+      },
+      "description": "Sinkronisasi real-time lintas perangkat untuk komoditas yang ditambah, diubah, atau dihapus oleh Admin."
+    },
+    "/custom_officers/{officerCode}": {
+      "schema": {
+        "$ref": "#/entities/CustomOfficerOverride"
+      },
+      "description": "Sinkronisasi real-time lintas perangkat untuk kode petugas yang ditambah, diubah, atau dihapus oleh Admin."
+    }
+  }
+}

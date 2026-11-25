@@ -1,5 +1,23 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { CommodityItem, OfficerItem, QuestionnaireId, SectorId } from './types';
+import {
+  collection,
+  doc,
+  onSnapshot,
+  query,
+  where,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  getDocs,
+} from 'firebase/firestore';
+import { db, OperationType, handleFirestoreError } from './firebase';
+import {
+  CommodityItem,
+  OfficerItem,
+  ProposedCommodityItem,
+  QuestionnaireId,
+  SectorId,
+} from './types';
 import { INITIAL_COMMODITIES } from './data/commodities';
 import { INITIAL_OFFICERS } from './data/officers';
 import { PML_CHECKLIST_RULES } from './data/pmlRules';
@@ -8,6 +26,8 @@ import { CommodityTab, FilterGroup, SECTOR_FILTERS } from './components/Commodit
 import { OfficerTab } from './components/OfficerTab';
 import { LocalAssistantTab } from './components/LocalAssistantTab';
 import { PmlAssistantTab } from './components/PmlAssistantTab';
+import { ProposedCommodityTab } from './components/ProposedCommodityTab';
+import { SubsectorDictionaryModal } from './components/SubsectorDictionaryModal';
 import { AdminModal } from './components/AdminModal';
 
 const STORAGE_KEYS = {
@@ -17,16 +37,96 @@ const STORAGE_KEYS = {
   CHECKLIST: 'spdt_ntp_2026_pml_checklist_v3',
   ADMIN_SESSION: 'spdt_ntp_2026_admin_session_v3',
   THEME: 'spdt_ntp_2026_theme_v1',
+  PROPOSALS_CACHE: 'spdt_ntp_2026_proposals_cache_v1',
 };
 
-type ActiveTab = 'COMMODITIES' | 'OFFICERS' | 'ASSISTANT' | 'PML_TOOLS';
+interface CustomCommodityDoc {
+  code: string;
+  name: string;
+  unit: string;
+  plantUnit: string;
+  groupCode: string;
+  groupName: string;
+  sectorId: Exclude<SectorId, 'ALL'>;
+  sectorName: string;
+  questionnaireCode: string;
+  categoryType: CommodityItem['categoryType'];
+  notes: string;
+  action: 'UPSERT' | 'DELETE';
+  updatedAtMs: number;
+}
+
+interface CustomOfficerDoc {
+  code: string;
+  name: string;
+  role: 'PCL' | 'PML';
+  action: 'UPSERT' | 'DELETE';
+  updatedAtMs: number;
+}
+
+type ActiveTab = 'COMMODITIES' | 'OFFICERS' | 'ASSISTANT' | 'PML_TOOLS' | 'PROPOSED';
 
 export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<ActiveTab>('COMMODITIES');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSubsectorDictOpen, setIsSubsectorDictOpen] = useState(false);
   const [selectedSector, setSelectedSector] = useState<SectorId>('ALL');
   const [selectedGroup, setSelectedGroup] = useState<FilterGroup>('ALL');
+  const [proposedDraftName, setProposedDraftName] = useState<string>('');
+  const [isFirebaseConnected, setIsFirebaseConnected] = useState<boolean>(false);
+
+  const [proposals, setProposals] = useState<ProposedCommodityItem[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.PROPOSALS_CACHE);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch {
+      // Fallback
+    }
+    return [];
+  });
+
+  // Real-time Firebase Firestore synchronization for /proposed_commodities
+  useEffect(() => {
+    const proposalsQuery = query(
+      collection(db, 'proposed_commodities'),
+      where('status', 'in', ['BELUM_ADA_KODE', 'DITINJAU_PML'])
+    );
+
+    const unsubscribe = onSnapshot(
+      proposalsQuery,
+      (snapshot) => {
+        const loaded: ProposedCommodityItem[] = [];
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data() as ProposedCommodityItem;
+          if (data && data.id && data.name) {
+            loaded.push(data);
+          }
+        });
+        loaded.sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0));
+        setProposals(loaded);
+        setIsFirebaseConnected(true);
+        try {
+          localStorage.setItem(STORAGE_KEYS.PROPOSALS_CACHE, JSON.stringify(loaded));
+        } catch {
+          // Ignore storage quota
+        }
+      },
+      (error) => {
+        setIsFirebaseConnected(false);
+        try {
+          handleFirestoreError(error, OperationType.LIST, 'proposed_commodities');
+        } catch {
+          // Logged by handleFirestoreError; keep localStorage cache operational
+        }
+      }
+    );
+
+    return () => unsubscribe();
+  }, []);
 
   // Dual Theme: Light & Dark Mode
   const [isDark, setIsDark] = useState<boolean>(() => {
@@ -79,6 +179,132 @@ export default function App() {
     }
     return INITIAL_OFFICERS;
   });
+
+  // Real-time Firebase Firestore synchronization for Admin commodity overrides (/custom_commodities)
+  useEffect(() => {
+    const customCommoditiesQuery = query(
+      collection(db, 'custom_commodities'),
+      where('action', 'in', ['UPSERT', 'DELETE'])
+    );
+
+    const unsubscribe = onSnapshot(
+      customCommoditiesQuery,
+      (snapshot) => {
+        const upserts = new Map<string, CommodityItem>();
+        const deletes = new Set<string>();
+
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data() as CustomCommodityDoc;
+          if (!data || !data.code) return;
+          if (data.action === 'DELETE') {
+            deletes.add(data.code);
+          } else if (data.action === 'UPSERT') {
+            upserts.set(data.code, {
+              code: data.code,
+              name: data.name,
+              unit: data.unit,
+              plantUnit: data.plantUnit || undefined,
+              groupCode: data.groupCode,
+              groupName: data.groupName,
+              sectorId: data.sectorId,
+              sectorName: data.sectorName,
+              questionnaireCode: data.questionnaireCode,
+              categoryType: data.categoryType,
+              notes: data.notes || undefined,
+              isCustom: true,
+            });
+          }
+        });
+
+        const baseCodes = new Set<string>();
+        const merged: CommodityItem[] = [];
+
+        for (const baseItem of INITIAL_COMMODITIES) {
+          baseCodes.add(baseItem.code);
+          if (deletes.has(baseItem.code)) continue;
+          const override = upserts.get(baseItem.code);
+          merged.push(override || baseItem);
+        }
+
+        // Prepend brand-new custom commodities added by Admin
+        const newCustoms: CommodityItem[] = [];
+        upserts.forEach((item, code) => {
+          if (!baseCodes.has(code) && !deletes.has(code)) {
+            newCustoms.push(item);
+          }
+        });
+
+        const finalCommodities = [...newCustoms, ...merged];
+        setCommodities(finalCommodities);
+      },
+      (error) => {
+        try {
+          handleFirestoreError(error, OperationType.LIST, 'custom_commodities');
+        } catch {
+          // Keep local state on error
+        }
+      }
+    );
+
+    return () => unsubscribe();
+  }, []);
+
+  // Real-time Firebase Firestore synchronization for Admin officer overrides (/custom_officers)
+  useEffect(() => {
+    const customOfficersQuery = query(
+      collection(db, 'custom_officers'),
+      where('action', 'in', ['UPSERT', 'DELETE'])
+    );
+
+    const unsubscribe = onSnapshot(
+      customOfficersQuery,
+      (snapshot) => {
+        const upserts = new Map<string, OfficerItem>();
+        const deletes = new Set<string>();
+
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data() as CustomOfficerDoc;
+          if (!data || !data.code) return;
+          if (data.action === 'DELETE') {
+            deletes.add(data.code);
+          } else if (data.action === 'UPSERT') {
+            upserts.set(data.code, {
+              code: data.code,
+              name: data.name,
+              role: data.role,
+              isCustom: true,
+            });
+          }
+        });
+
+        const map = new Map<string, OfficerItem>();
+        for (const baseOff of INITIAL_OFFICERS) {
+          if (!deletes.has(baseOff.code)) {
+            map.set(baseOff.code, baseOff);
+          }
+        }
+        upserts.forEach((off, code) => {
+          if (!deletes.has(code)) {
+            map.set(code, off);
+          }
+        });
+
+        const finalOfficers = Array.from(map.values()).sort((a, b) =>
+          a.code.localeCompare(b.code)
+        );
+        setOfficers(finalOfficers);
+      },
+      (error) => {
+        try {
+          handleFirestoreError(error, OperationType.LIST, 'custom_officers');
+        } catch {
+          // Keep local state on error
+        }
+      }
+    );
+
+    return () => unsubscribe();
+  }, []);
 
   const [favorites, setFavorites] = useState<string[]>(() => {
     try {
@@ -233,6 +459,56 @@ export default function App() {
     showToast(`Checklist ${questionnaire} direset`);
   };
 
+  const syncCommodityToFirestore = async (item: CommodityItem, action: 'UPSERT' | 'DELETE') => {
+    const docData: CustomCommodityDoc = {
+      code: item.code.trim(),
+      name: (item.name || '-').trim().slice(0, 200),
+      unit: (item.unit || '-').trim().slice(0, 60),
+      plantUnit: (item.plantUnit || '').trim().slice(0, 60),
+      groupCode: (item.groupCode || '00').trim().slice(0, 40),
+      groupName: (item.groupName || '-').trim().slice(0, 200),
+      sectorId: item.sectorId,
+      sectorName: (item.sectorName || '-').trim().slice(0, 120),
+      questionnaireCode: (item.questionnaireCode || 'SPDT26').trim().slice(0, 60),
+      categoryType: item.categoryType,
+      notes: (item.notes || '').trim().slice(0, 400),
+      action,
+      updatedAtMs: Date.now(),
+    };
+    try {
+      await setDoc(doc(db, 'custom_commodities', docData.code), docData);
+    } catch (error) {
+      try {
+        handleFirestoreError(
+          error,
+          OperationType.WRITE,
+          `custom_commodities/${docData.code}`
+        );
+      } catch {
+        // Logged
+      }
+    }
+  };
+
+  const syncOfficerToFirestore = async (item: OfficerItem, action: 'UPSERT' | 'DELETE') => {
+    const docData: CustomOfficerDoc = {
+      code: item.code.trim(),
+      name: (item.name || '-').trim().slice(0, 160),
+      role: item.role === 'PML' ? 'PML' : 'PCL',
+      action,
+      updatedAtMs: Date.now(),
+    };
+    try {
+      await setDoc(doc(db, 'custom_officers', docData.code), docData);
+    } catch (error) {
+      try {
+        handleFirestoreError(error, OperationType.WRITE, `custom_officers/${docData.code}`);
+      } catch {
+        // Logged
+      }
+    }
+  };
+
   const handleSaveCommodity = (newItem: CommodityItem, originalCode?: string) => {
     setCommodities((prev) => {
       if (originalCode) {
@@ -246,12 +522,24 @@ export default function App() {
       }
       return [newItem, ...prev];
     });
-    showToast(`Komoditas ${newItem.code} disimpan`);
+
+    if (originalCode && originalCode !== newItem.code) {
+      const oldFound = commodities.find((c) => c.code === originalCode);
+      if (oldFound) {
+        void syncCommodityToFirestore(oldFound, 'DELETE');
+      }
+    }
+    void syncCommodityToFirestore(newItem, 'UPSERT');
+    showToast(`Komoditas ${newItem.code} tersimpan & tersinkron ke semua perangkat`);
   };
 
   const handleDeleteCommodity = (code: string) => {
+    const target = commodities.find((item) => item.code === code);
     setCommodities((prev) => prev.filter((item) => item.code !== code));
-    showToast(`Komoditas ${code} dihapus`);
+    if (target) {
+      void syncCommodityToFirestore(target, 'DELETE');
+    }
+    showToast(`Komoditas ${code} dihapus di semua perangkat`);
   };
 
   const handleSaveOfficer = (newOfficer: OfficerItem, originalCode?: string) => {
@@ -269,12 +557,24 @@ export default function App() {
       }
       return [...prev, newOfficer].sort((a, b) => a.code.localeCompare(b.code));
     });
-    showToast(`Petugas ${newOfficer.code} disimpan`);
+
+    if (originalCode && originalCode !== newOfficer.code) {
+      const oldFound = officers.find((o) => o.code === originalCode);
+      if (oldFound) {
+        void syncOfficerToFirestore(oldFound, 'DELETE');
+      }
+    }
+    void syncOfficerToFirestore(newOfficer, 'UPSERT');
+    showToast(`Petugas ${newOfficer.code} tersimpan & tersinkron ke semua perangkat`);
   };
 
   const handleDeleteOfficer = (code: string) => {
+    const target = officers.find((item) => item.code === code);
     setOfficers((prev) => prev.filter((item) => item.code !== code));
-    showToast(`Petugas ${code} dihapus`);
+    if (target) {
+      void syncOfficerToFirestore(target, 'DELETE');
+    }
+    showToast(`Petugas ${code} dihapus di semua perangkat`);
   };
 
   const handleImportOfficersCsv = (csvText: string) => {
@@ -306,10 +606,15 @@ export default function App() {
       imported.forEach((o) => map.set(o.code, o));
       return Array.from(map.values()).sort((a, b) => a.code.localeCompare(b.code));
     });
+
+    imported.forEach((off) => {
+      void syncOfficerToFirestore(off, 'UPSERT');
+    });
+
     return {
       ok: true,
       count: imported.length,
-      message: `${imported.length} petugas berhasil dimuat.`,
+      message: `${imported.length} petugas berhasil dimuat & disinkronkan ke semua perangkat.`,
     };
   };
 
@@ -356,7 +661,126 @@ export default function App() {
     setOfficers(INITIAL_OFFICERS);
     localStorage.removeItem(STORAGE_KEYS.COMMODITIES);
     localStorage.removeItem(STORAGE_KEYS.OFFICERS);
-    showToast('Database dikembalikan ke standar Buku 5');
+    void (async () => {
+      try {
+        const commSnap = await getDocs(
+          query(collection(db, 'custom_commodities'), where('action', 'in', ['UPSERT', 'DELETE']))
+        );
+        await Promise.all(commSnap.docs.map((d) => deleteDoc(doc(db, 'custom_commodities', d.id))));
+        const offSnap = await getDocs(
+          query(collection(db, 'custom_officers'), where('action', 'in', ['UPSERT', 'DELETE']))
+        );
+        await Promise.all(offSnap.docs.map((d) => deleteDoc(doc(db, 'custom_officers', d.id))));
+      } catch {
+        // Ignore
+      }
+    })();
+    showToast('Database dikembalikan ke standar Buku 5 di semua perangkat');
+  };
+
+  // Proposed Commodities (Belum Ada Kode di Buku 5) - Open entry without Admin login
+  const handleAddProposal = async (
+    draft: Omit<ProposedCommodityItem, 'id' | 'createdAtMs'>
+  ) => {
+    const now = Date.now();
+    const id = `prop_${now}_${Math.random().toString(36).slice(2, 8)}`;
+    const newItem: ProposedCommodityItem = {
+      id,
+      name: draft.name.trim().toUpperCase(),
+      unit: draft.unit.trim().toUpperCase(),
+      sector: draft.sector,
+      category: draft.category,
+      groupCode: draft.groupCode.trim(),
+      groupLabel: draft.groupLabel.trim(),
+      officerCode: draft.officerCode.trim(),
+      officerName: draft.officerName.trim(),
+      note: draft.note.trim(),
+      status: draft.status,
+      createdAtMs: now,
+    };
+
+    // Optimistic local state update
+    setProposals((prev) => {
+      const next = [newItem, ...prev];
+      try {
+        localStorage.setItem(STORAGE_KEYS.PROPOSALS_CACHE, JSON.stringify(next));
+      } catch {
+        // Ignore
+      }
+      return next;
+    });
+
+    try {
+      await setDoc(doc(db, 'proposed_commodities', id), newItem);
+      showToast(`Pengajuan "${newItem.name}" tersimpan`);
+    } catch (error) {
+      showToast(`Tersimpan lokal: "${newItem.name}"`);
+      try {
+        handleFirestoreError(error, OperationType.CREATE, `proposed_commodities/${id}`);
+      } catch {
+        // Error logged by handleFirestoreError
+      }
+    }
+  };
+
+  const handleToggleProposalStatus = async (item: ProposedCommodityItem) => {
+    const nextStatus: ProposedCommodityItem['status'] =
+      item.status === 'BELUM_ADA_KODE' ? 'DITINJAU_PML' : 'BELUM_ADA_KODE';
+
+    setProposals((prev) => {
+      const next = prev.map((p) => (p.id === item.id ? { ...p, status: nextStatus } : p));
+      try {
+        localStorage.setItem(STORAGE_KEYS.PROPOSALS_CACHE, JSON.stringify(next));
+      } catch {
+        // Ignore
+      }
+      return next;
+    });
+
+    try {
+      await updateDoc(doc(db, 'proposed_commodities', item.id), {
+        status: nextStatus,
+      });
+      showToast(
+        `Status "${item.name}": ${
+          nextStatus === 'DITINJAU_PML' ? 'DITINJAU PML' : 'BELUM ADA KODE'
+        }`
+      );
+    } catch (error) {
+      try {
+        handleFirestoreError(error, OperationType.UPDATE, `proposed_commodities/${item.id}`);
+      } catch {
+        // Error logged
+      }
+    }
+  };
+
+  const handleDeleteProposal = async (id: string) => {
+    setProposals((prev) => {
+      const next = prev.filter((p) => p.id !== id);
+      try {
+        localStorage.setItem(STORAGE_KEYS.PROPOSALS_CACHE, JSON.stringify(next));
+      } catch {
+        // Ignore
+      }
+      return next;
+    });
+
+    try {
+      await deleteDoc(doc(db, 'proposed_commodities', id));
+      showToast('Usulan komoditas dihapus');
+    } catch (error) {
+      try {
+        handleFirestoreError(error, OperationType.DELETE, `proposed_commodities/${id}`);
+      } catch {
+        // Error logged
+      }
+    }
+  };
+
+  const handleProposeFromSearch = (draftName: string) => {
+    setProposedDraftName(draftName);
+    setActiveTab('PROPOSED');
   };
 
   if (isLoading) {
@@ -371,6 +795,7 @@ export default function App() {
 
   const navItems: { id: ActiveTab; label: string; badge?: string }[] = [
     { id: 'COMMODITIES', label: 'Master Komoditas', badge: commodities.length.toLocaleString('id-ID') },
+    { id: 'PROPOSED', label: 'Pengajuan Kode', badge: String(proposals.length) },
     { id: 'OFFICERS', label: 'Kode Petugas', badge: String(officers.length) },
     { id: 'ASSISTANT', label: 'Crosscheck Pemeriksaan' },
     { id: 'PML_TOOLS', label: 'Kalkulator PML' },
@@ -461,7 +886,7 @@ export default function App() {
           </div>
 
           {/* Zone 2: Clean Typography Navigation Links */}
-          <nav className="hidden items-center gap-6 md:flex" aria-label="Navigasi Utama">
+          <nav className="hidden items-center gap-5 md:flex" aria-label="Navigasi Utama">
             {navItems.map((tab) => {
               const active = activeTab === tab.id;
               return (
@@ -469,13 +894,18 @@ export default function App() {
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
-                  className={`relative flex h-[57px] items-center text-xs font-semibold whitespace-nowrap transition ${
+                  className={`relative flex h-[57px] items-center gap-1.5 text-xs font-semibold whitespace-nowrap transition ${
                     active
                       ? 'text-[#003D7A] dark:text-[#38BDF8]'
                       : 'text-[#64748B] hover:text-[#0F172A] dark:text-[#94A3B8] dark:hover:text-[#F8FAFC]'
                   }`}
                 >
                   <span>{tab.label}</span>
+                  {tab.id === 'PROPOSED' && proposals.length > 0 && (
+                    <span className="tabular-code rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+                      {proposals.length}
+                    </span>
+                  )}
                   {active && (
                     <span className="absolute right-0 bottom-0 left-0 h-0.5 bg-[#003D7A] dark:bg-[#38BDF8]" />
                   )}
@@ -484,8 +914,21 @@ export default function App() {
             })}
           </nav>
 
-          {/* Zone 3: Theme Switcher (+ Hidden Admin Button when unlocked via 4x 'f') */}
+          {/* Zone 3: Kamus Subsektor (1-7) Popup Trigger + Theme Switcher (+ Hidden Admin Button when unlocked via 4x 'f') */}
           <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setIsSubsectorDictOpen(true)}
+              className="flex h-8 items-center gap-1.5 rounded-md border border-[#003D7A] bg-[#EFF6FF] px-2.5 text-xs font-bold whitespace-nowrap text-[#003D7A] transition hover:bg-[#003D7A] hover:text-white dark:border-[#0284C7] dark:bg-[#0F2952] dark:text-[#38BDF8] dark:hover:bg-[#0284C7] dark:hover:text-white"
+              title="Buka Kamus Kode Subsektor (1 Tanaman Pangan s.d. 7 Kehutanan)"
+            >
+              <span className="tabular-code rounded bg-[#003D7A] px-1.5 py-0.5 text-[10px] font-extrabold text-white dark:bg-[#0284C7]">
+                1–7
+              </span>
+              <span className="hidden sm:inline">Kamus Subsektor</span>
+              <span className="sm:hidden">Subsektor</span>
+            </button>
+
             {(adminUnlocked || isAdmin) && (
               <button
                 type="button"
@@ -611,7 +1054,7 @@ export default function App() {
             {/* Section 2: Quick Subsektor Filter (Buku 5) */}
             <div className="mt-5 border-t border-[#E2E8F0] pt-4 dark:border-[#1E293B]">
               <div className="px-2 text-[11px] font-bold tracking-wider uppercase text-[#94A3B8] dark:text-[#64748B]">
-                Subsektor Buku 5
+                Kamus & Subsektor Buku 5
               </div>
               <div className="mt-1.5 space-y-1">
                 {SECTOR_FILTERS.map((sf) => {
@@ -739,6 +1182,22 @@ export default function App() {
               selectedGroup={selectedGroup}
               onSelectGroup={setSelectedGroup}
               onOpenSidebar={() => setIsSidebarOpen(true)}
+              onProposeNewCommodity={handleProposeFromSearch}
+            />
+          )}
+
+          {activeTab === 'PROPOSED' && (
+            <ProposedCommodityTab
+              proposals={proposals}
+              commodities={commodities}
+              officers={officers}
+              initialDraftName={proposedDraftName}
+              onClearDraftName={() => setProposedDraftName('')}
+              onAddProposal={handleAddProposal}
+              onToggleStatus={handleToggleProposalStatus}
+              onDeleteProposal={handleDeleteProposal}
+              onCopyText={handleCopyCode}
+              isFirebaseConnected={isFirebaseConnected}
             />
           )}
 
@@ -767,6 +1226,7 @@ export default function App() {
               commodities={commodities}
               officers={officers}
               onCopyCode={handleCopyCode}
+              onProposeNewCommodity={handleProposeFromSearch}
             />
           )}
 
@@ -807,6 +1267,17 @@ export default function App() {
           );
         })}
       </nav>
+
+      {/* Kamus Kode Subsektor (1 s.d. 7) Modal */}
+      <SubsectorDictionaryModal
+        isOpen={isSubsectorDictOpen}
+        onClose={() => setIsSubsectorDictOpen(false)}
+        onSelectSectorInDirectory={(sectorId) => {
+          setSelectedSector(sectorId);
+          setActiveTab('COMMODITIES');
+        }}
+        onCopyText={handleCopyCode}
+      />
 
       {/* Admin Modal */}
       <AdminModal
