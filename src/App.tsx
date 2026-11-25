@@ -372,7 +372,7 @@ export default function App() {
   const navItems: { id: ActiveTab; label: string; badge?: string }[] = [
     { id: 'COMMODITIES', label: 'Master Komoditas', badge: commodities.length.toLocaleString('id-ID') },
     { id: 'OFFICERS', label: 'Kode Petugas', badge: String(officers.length) },
-    { id: 'ASSISTANT', label: 'Asisten Lokal' },
+    { id: 'ASSISTANT', label: 'Crosscheck Pemeriksaan' },
     { id: 'PML_TOOLS', label: 'Kalkulator PML' },
   ];
 
@@ -389,12 +389,12 @@ export default function App() {
       {/* Sticky Top Header (Height: 57px, matches sticky top-[57px] filter bars) */}
       <header className="sticky top-0 z-40 h-[57px] border-b border-[#E2E8F0] bg-white/95 backdrop-blur-xs dark:border-[#1E293B] dark:bg-[#111827]/95">
         <div className="mx-auto flex h-full max-w-6xl items-center justify-between gap-4 px-4 sm:px-8">
-          {/* Zone 1: Burger Button + Brand Mark with Custom SPDT Balance Scale / Neraca Logo */}
+          {/* Zone 1: Burger Button (Mobile Only: md:hidden) + Brand Mark with Custom SPDT Balance Scale / Neraca Logo */}
           <div className="flex items-center gap-2.5 shrink-0">
             <button
               type="button"
               onClick={() => setIsSidebarOpen((prev) => !prev)}
-              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md border transition ${
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md border transition md:hidden ${
                 isSidebarOpen
                   ? 'border-[#003D7A] bg-[#003D7A] text-white dark:border-[#0284C7] dark:bg-[#0284C7]'
                   : 'border-[#E2E8F0] bg-[#F8FAFC] text-[#334155] hover:border-[#CBD5E1] hover:bg-white hover:text-[#0F172A] dark:border-[#334155] dark:bg-[#1E293B] dark:text-[#CBD5E1] dark:hover:text-white'
@@ -539,20 +539,20 @@ export default function App() {
         </div>
       </header>
 
-      {/* Hide & Show Sidebar Drawer + Backdrop */}
+      {/* Hide & Show Sidebar Drawer + Backdrop (Mobile Responsive Only: md:hidden) */}
       {isSidebarOpen && (
         <div
-          className="fixed inset-0 top-[57px] z-30 bg-slate-950/35 backdrop-blur-[1px] lg:hidden"
+          className="fixed inset-0 top-[57px] z-30 bg-slate-950/35 backdrop-blur-[1px] md:hidden"
           onClick={() => setIsSidebarOpen(false)}
           aria-hidden="true"
         />
       )}
 
       <div className="mx-auto flex max-w-6xl">
-        {/* Responsive Hide & Show Sidebar */}
+        {/* Responsive Hide & Show Sidebar (Mobile Only: md:hidden) */}
         {isSidebarOpen && (
           <aside
-            className="fixed top-[57px] bottom-0 left-0 z-40 w-72 overflow-y-auto border-r border-[#E2E8F0] bg-white p-4 shadow-xl lg:sticky lg:top-[57px] lg:z-20 lg:h-[calc(100vh-57px)] lg:w-64 lg:shrink-0 lg:shadow-none dark:border-[#1E293B] dark:bg-[#111827]"
+            className="fixed top-[57px] bottom-0 left-0 z-40 w-72 overflow-y-auto border-r border-[#E2E8F0] bg-white p-4 shadow-xl md:hidden dark:border-[#1E293B] dark:bg-[#111827]"
             aria-label="Menu Sidebar Navigasi & Filter"
           >
             <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-3 dark:border-[#1E293B]">
@@ -677,6 +677,14 @@ export default function App() {
                 Dokumen Pedoman (PDF)
               </div>
               <div className="mt-1.5 space-y-1 text-xs">
+                <a
+                  href="./assets/aistudio/Kues_SPDT_NTP_2026__Konsumsi__d572b96b.pdf"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block rounded-md px-2.5 py-1.5 font-medium text-[#475569] hover:bg-[#F8FAFC] hover:text-[#003D7A] dark:text-[#94A3B8] dark:hover:bg-[#1E293B] dark:hover:text-[#38BDF8]"
+                >
+                  Kuesioner SPDT26-K (Konsumsi) ↗
+                </a>
                 <a
                   href="./assets/aistudio/Buku_5_Master_Komoditas_SPDT_NTP_2026_089343c2.pdf"
                   target="_blank"

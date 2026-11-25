@@ -5,6 +5,7 @@ import {
   QUESTIONNAIRE_LIST,
   ROKOK_REFERENCE_CODES,
 } from '../data/pmlRules';
+import { Spdt26kCalculator } from './Spdt26kCalculator';
 
 interface PmlAssistantTabProps {
   checkedRuleIds: string[];
@@ -28,7 +29,7 @@ export const PmlAssistantTab: React.FC<PmlAssistantTabProps> = ({
   onResetChecklist,
   onCopyText,
 }) => {
-  const [activeTool, setActiveTool] = useState<'MERGER' | 'SANITY' | 'CHECKLIST'>('MERGER');
+  const [activeTool, setActiveTool] = useState<'SPDT26K' | 'MERGER' | 'SANITY' | 'CHECKLIST'>('SPDT26K');
   const [selectedDoc, setSelectedDoc] = useState<QuestionnaireId>('SPDT26-K');
 
   // Merger Calculator State
@@ -183,11 +184,12 @@ export const PmlAssistantTab: React.FC<PmlAssistantTabProps> = ({
   return (
     <div className="space-y-5">
       {/* STICKY SUB-NAVIGATION FOR PML TOOLS */}
-      <div className="sticky top-[57px] z-20 -mx-5 border-b border-[#E2E8F0] bg-[#F8FAFC]/95 px-5 py-3 backdrop-blur-xs sm:-mx-8 sm:px-8 dark:border-[#1E293B] dark:bg-[#0B0F19]/95">
+      <div className="sticky top-[57px] z-20 -mx-4 border-b border-[#E2E8F0] bg-[#F8FAFC]/95 px-4 py-3 backdrop-blur-xs sm:-mx-8 sm:px-8 dark:border-[#1E293B] dark:bg-[#0B0F19]/95">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center rounded-md border border-[#E2E8F0] bg-white p-0.5 dark:border-[#1E293B] dark:bg-[#111827]">
+          <div className="flex flex-wrap items-center gap-1 rounded-md border border-[#E2E8F0] bg-white p-1 dark:border-[#1E293B] dark:bg-[#111827]">
             {(
               [
+                { id: 'SPDT26K', label: 'Kalkulator SPDT26-K (Konsumsi)' },
                 { id: 'MERGER', label: 'Gabung Rokok & Komoditas' },
                 { id: 'SANITY', label: 'Uji Kewajaran Angka' },
                 { id: 'CHECKLIST', label: 'Checklist Kuesioner' },
@@ -197,9 +199,9 @@ export const PmlAssistantTab: React.FC<PmlAssistantTabProps> = ({
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTool(tab.id)}
-                className={`h-8 rounded px-3.5 text-xs font-semibold whitespace-nowrap transition ${
+                className={`h-8 rounded px-3 text-xs font-semibold whitespace-nowrap transition ${
                   activeTool === tab.id
-                    ? 'bg-[#003D7A] text-white dark:bg-[#1E3A8A] dark:text-white'
+                    ? 'bg-[#003D7A] text-white dark:bg-[#0284C7] dark:text-white'
                     : 'text-[#64748B] hover:text-[#0F172A] dark:text-[#94A3B8] dark:hover:text-[#F8FAFC]'
                 }`}
               >
@@ -208,16 +210,32 @@ export const PmlAssistantTab: React.FC<PmlAssistantTabProps> = ({
             ))}
           </div>
 
-          <a
-            href="./assets/aistudio/Buku_6_Pedoman_Pemeriksaan_SPDT_NTP_2026_bff80b8e.pdf"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs font-semibold text-[#64748B] transition hover:text-[#003D7A] dark:text-[#94A3B8] dark:hover:text-[#38BDF8]"
-          >
-            Dokumen Buku 6 (PDF) ↗
-          </a>
+          <div className="flex flex-wrap items-center gap-3 text-xs font-semibold">
+            <a
+              href="./assets/aistudio/Kues_SPDT_NTP_2026__Konsumsi__d572b96b.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#003D7A] transition hover:underline dark:text-[#38BDF8]"
+            >
+              Kuesioner SPDT26-K (PDF) ↗
+            </a>
+            <span className="text-[#CBD5E1] dark:text-[#334155]">·</span>
+            <a
+              href="./assets/aistudio/Buku_6_Pedoman_Pemeriksaan_PML_SPDT_NTP_2026_87f14b4f.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#64748B] transition hover:text-[#003D7A] dark:text-[#94A3B8] dark:hover:text-[#38BDF8]"
+            >
+              Buku 6 PML (PDF) ↗
+            </a>
+          </div>
         </div>
       </div>
+
+      {/* =====================================================================
+          TOOL 0: KALKULATOR KUESIONER KONSUMSI (SPDT26-K)
+         ===================================================================== */}
+      {activeTool === 'SPDT26K' && <Spdt26kCalculator onCopyText={onCopyText} />}
 
       {/* =====================================================================
           TOOL 1: MERGER CALCULATOR

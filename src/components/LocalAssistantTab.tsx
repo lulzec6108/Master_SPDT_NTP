@@ -233,7 +233,7 @@ export const LocalAssistantTab: React.FC<LocalAssistantTabProps> = ({
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Tanya asisten lokal: ketik nama komoditas Buku 5, sinonim lapangan, atau nama petugas (contoh: rokok surya, odol, asam semut, arwana)..."
+              placeholder="Crosscheck Pemeriksaan: ketik nama komoditas Buku 5, sinonim lapangan, atau nama petugas (contoh: rokok surya, odol, asam semut, arwana)..."
               className="h-10 w-full rounded-md border border-[#CBD5E1] bg-white pr-20 pl-10 text-sm font-medium text-[#0F172A] placeholder:text-[#94A3B8] transition focus:border-[#003D7A] focus:outline-none dark:border-[#334155] dark:bg-[#111827] dark:text-[#F8FAFC] dark:placeholder:text-[#64748B] dark:focus:border-[#38BDF8]"
             />
             {query && (
