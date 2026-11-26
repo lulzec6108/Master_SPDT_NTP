@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   CategoryType,
   CommodityItem,
@@ -15,6 +15,10 @@ interface ProposedCommodityTabProps {
   initialDraftName?: string;
   onClearDraftName?: () => void;
   onAddProposal: (
+    item: Omit<ProposedCommodityItem, 'id' | 'createdAtMs'>
+  ) => Promise<void>;
+  onUpdateProposal: (
+    id: string,
     item: Omit<ProposedCommodityItem, 'id' | 'createdAtMs'>
   ) => Promise<void>;
   onToggleStatus: (item: ProposedCommodityItem) => Promise<void>;
@@ -144,34 +148,34 @@ export const SECTOR_OPTIONS: SectorOptionDef[] = [
   },
 ];
 
+function formatKonsumsiPrintedPrefix(code: string): string {
+  const rawDigits = code.replace(/[^0-9]/g, '');
+  if (rawDigits.length === 3) {
+    return `${rawDigits}1...`;
+  }
+  return (rawDigits + '....').slice(0, 7);
+}
+
 const KONSUMSI_GROUP_OPTIONS: GroupOptionDef[] = [
-  ...BLOK_7A_SUBGROUPS.map((s) => {
-    const rawDigits = s.code.replace(/\./g, '');
-    const prefix = (rawDigits + '....').slice(0, 7);
-    return {
-      groupCode: s.code,
-      printedPrefix: prefix,
-      blockName: 'Blok V',
-      groupLabel: `Blok V (${s.code}) — ${s.label}`,
-      category: 'KONSUMSI' as CategoryType,
-      recommendedUnits: ['KG', 'ONS', 'LITER', 'BUTIR', 'BUNGKUS', 'IKAT', 'PORSI', 'BATANG'],
-      blockHint: 'Konsumsi Makanan, Minuman, dan Tembakau Seminggu Terakhir (Blok V SPDT26-K)',
-    };
-  }),
+  ...BLOK_7A_SUBGROUPS.map((s) => ({
+    groupCode: s.code,
+    printedPrefix: formatKonsumsiPrintedPrefix(s.code),
+    blockName: `Blok V (${s.code})`,
+    groupLabel: `Blok V (${s.code}) — ${s.label}`,
+    category: 'KONSUMSI' as CategoryType,
+    recommendedUnits: ['KG', 'ONS', 'LITER', 'BUTIR', 'BUNGKUS', 'IKAT', 'PORSI', 'BATANG'],
+    blockHint: 'Konsumsi Makanan, Minuman, dan Tembakau Seminggu Terakhir (Blok V SPDT26-K)',
+  })),
   ...BLOK_7B_GROUPS.flatMap((g) =>
-    g.subgroups.map((s) => {
-      const rawDigits = s.code.replace(/\./g, '');
-      const prefix = (rawDigits + '....').slice(0, 7);
-      return {
-        groupCode: s.code,
-        printedPrefix: prefix,
-        blockName: 'Blok VI',
-        groupLabel: `Blok VI (${s.code}) — ${s.label}`,
-        category: 'KONSUMSI' as CategoryType,
-        recommendedUnits: ['BUAH', 'PASANG', 'BULAN', 'KWH', 'LITER', 'PAKET', 'UNIT', 'KALI'],
-        blockHint: `Konsumsi Bukan Makanan — Kelompok ${g.groupTitle} (Blok VI SPDT26-K)`,
-      };
-    })
+    g.subgroups.map((s) => ({
+      groupCode: s.code,
+      printedPrefix: formatKonsumsiPrintedPrefix(s.code),
+      blockName: `Blok VI (${s.code})`,
+      groupLabel: `Blok VI (${s.code}) — ${s.label}`,
+      category: 'KONSUMSI' as CategoryType,
+      recommendedUnits: ['BUAH', 'PASANG', 'BULAN', 'KWH', 'LITER', 'PAKET', 'UNIT', 'KALI'],
+      blockHint: `Konsumsi Bukan Makanan — Kelompok ${g.groupTitle} (Blok VI SPDT26-K)`,
+    }))
   ),
 ];
 
@@ -813,234 +817,744 @@ const COMMON_UNITS = [
 
 function getPrintedPrefixForProposal(item: ProposedCommodityItem): string {
   const groups = SECTOR_GROUP_MAP[item.sector] || [];
-  const found = groups.find(
-    (g) => g.groupCode === item.groupCode || item.groupLabel.includes(g.blockName)
+  const exact = groups.find(
+    (g) =>
+      g.groupCode.toUpperCase() === item.groupCode.toUpperCase() ||
+      g.groupCode.replace(/\./g, '') === item.groupCode.replace(/\./g, '')
   );
-  if (found) return found.printedPrefix;
+  if (exact) return exact.printedPrefix;
+
+  if (item.sector === 'KONSUMSI') {
+    return formatKonsumsiPrintedPrefix(item.groupCode);
+  }
+
   const digits = item.groupCode.replace(/[^0-9]/g, '');
   if (digits.length >= 3) return (digits + '....').slice(0, 7);
   return item.groupCode;
 }
 
-/**
- * Renders the proposal list onto a high-DPI HTML5 Canvas for PNG & PDF export.
- */
-function renderProposalsToCanvas(
-  items: ProposedCommodityItem[],
-  activeSectorFilter: ProposedSectorType | 'ALL'
-): HTMLCanvasElement {
-  const scale = 2;
-  const width = 1260;
-  const rowHeight = 48;
-  const headerHeight = 138;
-  const tableHeaderHeight = 42;
-  const footerHeight = 52;
-  const rowsCount = Math.max(1, items.length);
-  const height = headerHeight + tableHeaderHeight + rowsCount * rowHeight + footerHeight;
+function stripAutoPrefixNote(rawNote: string): string {
+  if (!rawNote) return '';
+  const cleaned = rawNote
+    .replace(/^\[Prefix\s+[^\]]+\]\s*/i, '')
+    .replace(/^Prefix Kode Kuesioner\s+SPDT26-[A-Z]+\s+\([^)]+\):\s*[0-9.]+\s*/i, '')
+    .trim();
+  return cleaned;
+}
 
-  const canvas = document.createElement('canvas');
-  canvas.width = width * scale;
-  canvas.height = height * scale;
-  const ctx = canvas.getContext('2d')!;
-  ctx.scale(scale, scale);
+// ============================================================================
+// HD PROPORTIONAL REPORT ENGINE (MULTI-LINE WORD WRAP, ZERO '...' TRUNCATION,
+// ZERO ASPECT-RATIO DISTORTION, A4 LANDSCAPE MULTI-PAGE PDF & HD PNG)
+// ============================================================================
 
-  // Background
-  ctx.fillStyle = '#FFFFFF';
-  ctx.fillRect(0, 0, width, height);
+interface ReportColumnDef {
+  title: string;
+  x: number;
+  w: number;
+}
 
-  // Top Institutional Banner
-  ctx.fillStyle = '#003D7A';
-  ctx.fillRect(0, 0, width, 98);
+const REPORT_LOGICAL_WIDTH = 1400;
+const REPORT_A4_LANDSCAPE_HEIGHT = 990; // Exact A4 Landscape ratio (1400 / 990 = 1.41414)
 
+const REPORT_COLS: ReportColumnDef[] = [
+  { title: 'NO', x: 28, w: 42 },
+  { title: 'STATUS KODE', x: 76, w: 128 },
+  { title: 'PREFIX KODE', x: 212, w: 102 },
+  { title: 'NAMA KOMODITAS DIAJUKAN', x: 322, w: 250 },
+  { title: 'SATUAN', x: 582, w: 94 },
+  { title: 'KUESIONER / SUBSEKTOR', x: 686, w: 184 },
+  { title: 'BLOK & RINCIAN KUESIONER', x: 880, w: 266 },
+  { title: 'PETUGAS PENGAJU & CATATAN', x: 1156, w: 216 },
+];
+
+function wrapTextLines(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number
+): string[] {
+  const clean = (text || '-').trim();
+  if (!clean) return ['-'];
+
+  const paragraphs = clean.split(/\n+/);
+  const lines: string[] = [];
+
+  for (const para of paragraphs) {
+    const words = para.split(/\s+/).filter(Boolean);
+    if (words.length === 0) continue;
+
+    let currentLine = '';
+
+    for (const word of words) {
+      const candidate = currentLine ? `${currentLine} ${word}` : word;
+      if (ctx.measureText(candidate).width <= maxWidth) {
+        currentLine = candidate;
+      } else {
+        if (currentLine) {
+          lines.push(currentLine);
+          currentLine = '';
+        }
+        // If single word itself exceeds maxWidth, split character by character
+        if (ctx.measureText(word).width > maxWidth) {
+          let chunk = '';
+          for (const ch of word) {
+            if (ctx.measureText(chunk + ch).width <= maxWidth) {
+              chunk += ch;
+            } else {
+              if (chunk) lines.push(chunk);
+              chunk = ch;
+            }
+          }
+          currentLine = chunk;
+        } else {
+          currentLine = word;
+        }
+      }
+    }
+    if (currentLine) {
+      lines.push(currentLine);
+    }
+  }
+
+  return lines.length > 0 ? lines : ['-'];
+}
+
+interface MeasuredProposalRow {
+  item: ProposedCommodityItem;
+  index: number;
+  printedPrefix: string;
+  nameLines: string[];
+  unitLines: string[];
+  sectorLines: string[];
+  groupLines: string[];
+  officerLines: string[];
+  noteLines: string[];
+  rowHeight: number;
+}
+
+function measureProposalRows(items: ProposedCommodityItem[]): MeasuredProposalRow[] {
+  const measureCanvas = document.createElement('canvas');
+  const ctx = measureCanvas.getContext('2d')!;
+  const lineH = 17;
+
+  return items.map((item, idx) => {
+    const printedPrefix = getPrintedPrefixForProposal(item);
+    const secObj = SECTOR_OPTIONS.find((s) => s.id === item.sector);
+    const sectorText = secObj
+      ? `${secObj.questionnaire} (${secObj.codeRange}) — ${secObj.shortLabel.replace(/\s*\(SPDT26-[A-Z]+\)/, '')}`
+      : item.sector;
+
+    ctx.font = 'bold 12.5px "Plus Jakarta Sans", Montserrat, sans-serif';
+    const nameLines = wrapTextLines(ctx, item.name, REPORT_COLS[3].w - 12);
+
+    ctx.font = 'bold 11.5px "JetBrains Mono", monospace';
+    const unitLines = wrapTextLines(ctx, item.unit, REPORT_COLS[4].w - 10);
+
+    ctx.font = '600 11.5px "Plus Jakarta Sans", Montserrat, sans-serif';
+    const sectorLines = wrapTextLines(ctx, sectorText, REPORT_COLS[5].w - 12);
+
+    ctx.font = '600 11.5px "Plus Jakarta Sans", Montserrat, sans-serif';
+    const groupFullText = `[${item.groupCode}] ${item.groupLabel}`;
+    const groupLines = wrapTextLines(ctx, groupFullText, REPORT_COLS[6].w - 12);
+
+    ctx.font = 'bold 11px "Plus Jakarta Sans", Montserrat, sans-serif';
+    const officerFullText = `${item.officerCode} — ${item.officerName}`;
+    const officerLines = wrapTextLines(ctx, officerFullText, REPORT_COLS[7].w - 10);
+
+    const userNote = stripAutoPrefixNote(item.note || '');
+    ctx.font = '500 10.5px "Plus Jakarta Sans", Montserrat, sans-serif';
+    const noteLines = userNote
+      ? wrapTextLines(ctx, `Catatan: ${userNote}`, REPORT_COLS[7].w - 10)
+      : [];
+
+    const col7TotalLines = officerLines.length + noteLines.length;
+    const maxLines = Math.max(
+      1,
+      nameLines.length,
+      unitLines.length,
+      sectorLines.length,
+      groupLines.length,
+      col7TotalLines
+    );
+
+    const rowHeight = Math.max(54, maxLines * lineH + 24);
+
+    return {
+      item,
+      index: idx,
+      printedPrefix,
+      nameLines,
+      unitLines,
+      sectorLines,
+      groupLines,
+      officerLines,
+      noteLines,
+      rowHeight,
+    };
+  });
+}
+
+function drawRoundedRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number
+) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function drawInstitutionalReportHeader(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  totalItems: number,
+  unreviewedCount: number,
+  reviewedCount: number,
+  activeSectorFilter: ProposedSectorType | 'ALL',
+  pageNumber: number,
+  totalPages: number,
+  nowStr: string
+): number {
   const activeSecObj =
     activeSectorFilter !== 'ALL'
       ? SECTOR_OPTIONS.find((s) => s.id === activeSectorFilter)
       : undefined;
 
+  // Main Deep Navy Institutional Header Banner
+  const bannerH = 112;
+  const grad = ctx.createLinearGradient(0, 0, width, bannerH);
+  grad.addColorStop(0, '#002248');
+  grad.addColorStop(0.6, '#003D7A');
+  grad.addColorStop(1, '#034C96');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, width, bannerH);
+
+  // Top Gold/Sky Accent Stripe
+  ctx.fillStyle = '#38BDF8';
+  ctx.fillRect(0, 0, width * 0.7, 4);
+  ctx.fillStyle = '#F59E0B';
+  ctx.fillRect(width * 0.7, 0, width * 0.3, 4);
+
+  // Emblem Box (Left) - Custom Balance Scale / Neraca SPDT
+  const logoX = 28;
+  const logoY = 22;
+  const logoSize = 68;
+  drawRoundedRect(ctx, logoX, logoY, logoSize, logoSize, 10);
+  ctx.fillStyle = '#0A2540';
+  ctx.fill();
+  ctx.strokeStyle = '#38BDF8';
+  ctx.lineWidth = 1.8;
+  ctx.stroke();
+
+  // Draw Balance Scale Vector inside Emblem Box
+  const cx = logoX + logoSize / 2;
+  const cy = logoY + logoSize / 2;
+  ctx.strokeStyle = '#F8FAFC';
+  ctx.lineWidth = 2.4;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - 20);
+  ctx.lineTo(cx, cy + 20);
+  ctx.moveTo(cx - 12, cy + 20);
+  ctx.lineTo(cx + 12, cy + 20);
+  ctx.stroke();
+
+  // Beam
+  ctx.strokeStyle = '#38BDF8';
+  ctx.lineWidth = 2.4;
+  ctx.beginPath();
+  ctx.moveTo(cx - 20, cy - 10);
+  ctx.lineTo(cx + 20, cy - 10);
+  ctx.stroke();
+
+  // Left Scale Pan (Emerald)
+  ctx.strokeStyle = '#4ADE80';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(cx - 20, cy - 10);
+  ctx.lineTo(cx - 25, cy + 4);
+  ctx.lineTo(cx - 15, cy + 4);
+  ctx.closePath();
+  ctx.stroke();
+
+  // Right Scale Pan (Amber)
+  ctx.strokeStyle = '#FB923C';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(cx + 20, cy - 10);
+  ctx.lineTo(cx + 15, cy + 4);
+  ctx.lineTo(cx + 25, cy + 4);
+  ctx.closePath();
+  ctx.stroke();
+
+  // Center Pivot Dot
+  ctx.fillStyle = '#F8FAFC';
+  ctx.beginPath();
+  ctx.arc(cx, cy - 10, 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Header Typography (Left-Center)
+  const textX = logoX + logoSize + 18;
+  ctx.fillStyle = '#7DD3FC';
+  ctx.font = 'bold 11.5px "JetBrains Mono", monospace';
+  ctx.fillText(
+    'SURVEI PENYEMPURNAAN DIAGRAM TIMBANG NILAI TUKAR PETANI (SPDT NTP 2026)',
+    textX,
+    33
+  );
+
   ctx.fillStyle = '#FFFFFF';
-  ctx.font = 'bold 19px Montserrat, sans-serif';
+  ctx.font = 'bold 21px "Plus Jakarta Sans", Montserrat, sans-serif';
   ctx.fillText(
     activeSecObj
-      ? `USULAN KODE KOMODITAS BARU — KUESIONER ${activeSecObj.questionnaire} (${activeSecObj.shortLabel.toUpperCase()})`
+      ? `DAFTAR USULAN KODE KOMODITAS BARU — KUESIONER ${activeSecObj.questionnaire}`
       : 'DAFTAR USULAN KODE KOMODITAS BARU (8 KUESIONER SPDT NTP 2026)',
-    28,
-    38
+    textX,
+    60
   );
 
-  ctx.fillStyle = '#BAE6FD';
-  ctx.font = '600 13px Montserrat, sans-serif';
+  ctx.fillStyle = '#E2E8F0';
+  ctx.font = '500 13px "Plus Jakarta Sans", Montserrat, sans-serif';
   ctx.fillText(
-    'Rekapitulasi Komoditas Lapangan Belum Berkode di Buku 5 Master Komoditas (Beserta Prefix Kode Kuesioner)',
-    28,
-    62
+    'Rekapitulasi Temuan Komoditas Lapangan Belum Berkode di Buku 5 Master Komoditas Beserta Prefix Kode Pengawas',
+    textX,
+    84
   );
 
+  // Right Summary Cards inside Header Banner
+  const cardW = 118;
+  const cardH = 66;
+  const cardGap = 10;
+  const cardsStartX = width - 28 - (cardW * 3 + cardGap * 2);
+  const cardY = 23;
+
+  const statCards = [
+    {
+      label: 'TOTAL USULAN',
+      value: `${totalItems}`,
+      sub: 'Komoditas',
+      bg: 'rgba(15, 23, 42, 0.55)',
+      border: '#38BDF8',
+      valColor: '#FFFFFF',
+    },
+    {
+      label: 'BELUM ADA KODE',
+      value: `${unreviewedCount}`,
+      sub: 'Perlu Kode',
+      bg: 'rgba(15, 23, 42, 0.55)',
+      border: '#FDA4AF',
+      valColor: '#FECDD3',
+    },
+    {
+      label: 'DITINJAU PML',
+      value: `${reviewedCount}`,
+      sub: 'Terverifikasi',
+      bg: 'rgba(15, 23, 42, 0.55)',
+      border: '#FCD34D',
+      valColor: '#FDE68A',
+    },
+  ];
+
+  statCards.forEach((sc, i) => {
+    const cxPos = cardsStartX + i * (cardW + cardGap);
+    drawRoundedRect(ctx, cxPos, cardY, cardW, cardH, 8);
+    ctx.fillStyle = sc.bg;
+    ctx.fill();
+    ctx.strokeStyle = sc.border;
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    ctx.fillStyle = '#CBD5E1';
+    ctx.font = 'bold 9.5px "JetBrains Mono", monospace';
+    ctx.fillText(sc.label, cxPos + 12, cardY + 18);
+
+    ctx.fillStyle = sc.valColor;
+    ctx.font = 'bold 20px "JetBrains Mono", monospace';
+    ctx.fillText(sc.value, cxPos + 12, cardY + 42);
+
+    ctx.fillStyle = '#94A3B8';
+    ctx.font = '600 10px "Plus Jakarta Sans", Montserrat, sans-serif';
+    ctx.fillText(sc.sub, cxPos + 12 + ctx.measureText(sc.value).width + 6, cardY + 41);
+  });
+
+  // Metadata Sub-bar below Navy Banner
+  const metaY = bannerH;
+  const metaH = 38;
+  ctx.fillStyle = '#F1F5F9';
+  ctx.fillRect(0, metaY, width, metaH);
+  ctx.strokeStyle = '#CBD5E1';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, metaY + metaH);
+  ctx.lineTo(width, metaY + metaH);
+  ctx.stroke();
+
+  ctx.fillStyle = '#0F172A';
+  ctx.font = 'bold 12px "Plus Jakarta Sans", Montserrat, sans-serif';
+  const scopeLabel = activeSecObj
+    ? `Cakupan Kuesioner: ${activeSecObj.label}`
+    : 'Cakupan Kuesioner: Semua 8 Kuesioner Resmi (SPDT26-K, TP, TH, TPR, TRK, IKT, IKB, HTN)';
+  ctx.fillText(scopeLabel, 28, metaY + 23);
+
+  ctx.fillStyle = '#475569';
+  ctx.font = '600 11.5px "JetBrains Mono", monospace';
+  const rightMeta = `Dicetak: ${nowStr}   |   Halaman ${pageNumber} dari ${totalPages}`;
+  const rmWidth = ctx.measureText(rightMeta).width;
+  ctx.fillText(rightMeta, width - 28 - rmWidth, metaY + 23);
+
+  // Table Column Header Bar
+  const thY = metaY + metaH;
+  const thH = 42;
+  ctx.fillStyle = '#0F172A';
+  ctx.fillRect(0, thY, width, thH);
+
+  ctx.fillStyle = '#F8FAFC';
+  ctx.font = 'bold 11px "Plus Jakarta Sans", Montserrat, sans-serif';
+  REPORT_COLS.forEach((col) => {
+    ctx.fillText(col.title, col.x, thY + 25);
+  });
+
+  return thY + thH;
+}
+
+function drawProposalRowsOnCanvas(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  startY: number,
+  rows: MeasuredProposalRow[]
+): number {
+  let curY = startY;
+  const lineH = 17;
+
+  if (rows.length === 0) {
+    const emptyH = 68;
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, curY, width, emptyH);
+    ctx.strokeStyle = '#CBD5E1';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, curY + emptyH);
+    ctx.lineTo(width, curY + emptyH);
+    ctx.stroke();
+
+    ctx.fillStyle = '#64748B';
+    ctx.font = '600 13px "Plus Jakarta Sans", Montserrat, sans-serif';
+    ctx.fillText(
+      'Belum ada komoditas usulan pada filter kuesioner ini.',
+      28,
+      curY + 38
+    );
+    return curY + emptyH;
+  }
+
+  rows.forEach((row) => {
+    const { item, index, rowHeight } = row;
+    ctx.fillStyle = index % 2 === 0 ? '#FFFFFF' : '#F8FAFC';
+    ctx.fillRect(0, curY, width, rowHeight);
+
+    // Subtle vertical column dividers for high readability
+    ctx.strokeStyle = '#E2E8F0';
+    ctx.lineWidth = 1;
+    REPORT_COLS.slice(1).forEach((col) => {
+      ctx.beginPath();
+      ctx.moveTo(col.x - 8, curY);
+      ctx.lineTo(col.x - 8, curY + rowHeight);
+      ctx.stroke();
+    });
+
+    // Row bottom border
+    ctx.strokeStyle = '#CBD5E1';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, curY + rowHeight);
+    ctx.lineTo(width, curY + rowHeight);
+    ctx.stroke();
+
+    const textTopY = curY + 24;
+
+    // 1. NO
+    ctx.fillStyle = '#334155';
+    ctx.font = 'bold 12px "JetBrains Mono", monospace';
+    ctx.fillText(String(index + 1).padStart(2, '0'), REPORT_COLS[0].x, textTopY);
+
+    // 2. STATUS KODE Badge
+    const isReviewed = item.status === 'DITINJAU_PML';
+    drawRoundedRect(ctx, REPORT_COLS[1].x, curY + 12, 118, 24, 5);
+    ctx.fillStyle = isReviewed ? '#FEF3C7' : '#FFE4E6';
+    ctx.fill();
+    ctx.strokeStyle = isReviewed ? '#F59E0B' : '#FB7185';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = isReviewed ? '#92400E' : '#BE123C';
+    ctx.font = 'bold 10px "JetBrains Mono", monospace';
+    ctx.fillText(
+      isReviewed ? 'DITINJAU PML' : 'BELUM ADA KODE',
+      REPORT_COLS[1].x + 9,
+      curY + 28
+    );
+
+    // 3. PREFIX KODE Badge
+    drawRoundedRect(ctx, REPORT_COLS[2].x, curY + 12, 90, 24, 5);
+    ctx.fillStyle = '#EFF6FF';
+    ctx.fill();
+    ctx.strokeStyle = '#93C5FD';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = '#003D7A';
+    ctx.font = 'bold 11.5px "JetBrains Mono", monospace';
+    ctx.fillText(row.printedPrefix, REPORT_COLS[2].x + 10, curY + 28);
+
+    // 4. NAMA KOMODITAS DIAJUKAN (Multi-line full text, zero '...')
+    ctx.fillStyle = '#0F172A';
+    ctx.font = 'bold 12.5px "Plus Jakarta Sans", Montserrat, sans-serif';
+    row.nameLines.forEach((line, lIdx) => {
+      ctx.fillText(line, REPORT_COLS[3].x, textTopY + lIdx * lineH);
+    });
+
+    // 5. SATUAN (Multi-line full text)
+    ctx.fillStyle = '#003D7A';
+    ctx.font = 'bold 11.5px "JetBrains Mono", monospace';
+    row.unitLines.forEach((line, lIdx) => {
+      ctx.fillText(line, REPORT_COLS[4].x, textTopY + lIdx * lineH);
+    });
+
+    // 6. KUESIONER / SUBSEKTOR (Multi-line full text)
+    ctx.fillStyle = '#1E293B';
+    ctx.font = '600 11.5px "Plus Jakarta Sans", Montserrat, sans-serif';
+    row.sectorLines.forEach((line, lIdx) => {
+      ctx.fillText(line, REPORT_COLS[5].x, textTopY + lIdx * lineH);
+    });
+
+    // 7. BLOK & RINCIAN KUESIONER (Multi-line full text, zero '...')
+    ctx.fillStyle = '#0F172A';
+    ctx.font = '600 11.5px "Plus Jakarta Sans", Montserrat, sans-serif';
+    row.groupLines.forEach((line, lIdx) => {
+      ctx.fillText(line, REPORT_COLS[6].x, textTopY + lIdx * lineH);
+    });
+
+    // 8. PETUGAS PENGAJU & CATATAN (Multi-line full text, zero '...')
+    ctx.fillStyle = '#0F172A';
+    ctx.font = 'bold 11px "Plus Jakarta Sans", Montserrat, sans-serif';
+    row.officerLines.forEach((line, lIdx) => {
+      ctx.fillText(line, REPORT_COLS[7].x, textTopY + lIdx * lineH);
+    });
+
+    if (row.noteLines.length > 0) {
+      ctx.fillStyle = '#475569';
+      ctx.font = '500 10.5px "Plus Jakarta Sans", Montserrat, sans-serif';
+      const noteStartOffset = row.officerLines.length * lineH;
+      row.noteLines.forEach((line, lIdx) => {
+        ctx.fillText(line, REPORT_COLS[7].x, textTopY + noteStartOffset + lIdx * lineH);
+      });
+    }
+
+    curY += rowHeight;
+  });
+
+  return curY;
+}
+
+function drawInstitutionalReportFooter(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  footerY: number,
+  footerH: number,
+  pageNumber: number,
+  totalPages: number
+) {
+  ctx.fillStyle = '#F1F5F9';
+  ctx.fillRect(0, footerY, width, footerH);
+  ctx.strokeStyle = '#CBD5E1';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, footerY);
+  ctx.lineTo(width, footerY);
+  ctx.stroke();
+
+  ctx.fillStyle = '#475569';
+  ctx.font = '600 11px "Plus Jakarta Sans", Montserrat, sans-serif';
+  ctx.fillText(
+    'Portal Master Komoditas & Pemeriksaan PML SPDT NTP 2026 — Database Murni Buku 5 (2.986 Komoditas) & Rekapitulasi Usulan Lapangan',
+    28,
+    footerY + 29
+  );
+
+  ctx.fillStyle = '#003D7A';
+  ctx.font = 'bold 11px "JetBrains Mono", monospace';
+  const pageLabel = `Halaman ${pageNumber} / ${totalPages}`;
+  const plW = ctx.measureText(pageLabel).width;
+  ctx.fillText(pageLabel, width - 28 - plW, footerY + 29);
+}
+
+/**
+ * Renders 1 or more proportional A4 Landscape HD canvases (2800 x 1980 px at scale=2)
+ * for multi-page PDF export so the aspect ratio is 100% locked (zero stretching/gepeng)
+ * and all text wraps cleanly across multiple lines.
+ */
+function renderProposalsToPaginatedPdfCanvases(
+  items: ProposedCommodityItem[],
+  activeSectorFilter: ProposedSectorType | 'ALL'
+): HTMLCanvasElement[] {
+  const scale = 2; // 2800 x 1980 px HD
+  const width = REPORT_LOGICAL_WIDTH;
+  const pageHeight = REPORT_A4_LANDSCAPE_HEIGHT;
+  const headerAndTableHeadH = 192; // 112 banner + 38 meta + 42 table header
+  const footerH = 48;
+  const maxRowsAreaH = pageHeight - headerAndTableHeadH - footerH - 12;
+
+  const measuredRows = measureProposalRows(items);
+  const pages: MeasuredProposalRow[][] = [];
+
+  if (measuredRows.length === 0) {
+    pages.push([]);
+  } else {
+    let currentPage: MeasuredProposalRow[] = [];
+    let currentH = 0;
+    for (const row of measuredRows) {
+      if (currentPage.length > 0 && currentH + row.rowHeight > maxRowsAreaH) {
+        pages.push(currentPage);
+        currentPage = [row];
+        currentH = row.rowHeight;
+      } else {
+        currentPage.push(row);
+        currentH += row.rowHeight;
+      }
+    }
+    if (currentPage.length > 0) {
+      pages.push(currentPage);
+    }
+  }
+
+  const totalItems = items.length;
+  const reviewedCount = items.filter((i) => i.status === 'DITINJAU_PML').length;
+  const unreviewedCount = totalItems - reviewedCount;
   const nowStr = new Date().toLocaleString('id-ID', {
     dateStyle: 'long',
     timeStyle: 'short',
   });
-  ctx.fillStyle = '#E2E8F0';
-  ctx.font = '500 12px "JetBrains Mono", monospace';
-  ctx.fillText(
-    `Cakupan: ${activeSecObj ? activeSecObj.label : 'Semua 8 Kuesioner (SPDT26-K s.d. SPDT26-HTN)'}  |  Total: ${items.length} Usulan  |  Dicetak: ${nowStr}`,
-    28,
-    84
-  );
 
-  // Subtitle Strip
-  ctx.fillStyle = '#F8FAFC';
-  ctx.fillRect(0, 98, width, 40);
-  ctx.strokeStyle = '#E2E8F0';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(0, 138);
-  ctx.lineTo(width, 138);
-  ctx.stroke();
+  return pages.map((pageRows, pIdx) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = width * scale;
+    canvas.height = pageHeight * scale;
+    const ctx = canvas.getContext('2d')!;
+    ctx.scale(scale, scale);
 
-  ctx.fillStyle = '#334155';
-  ctx.font = '600 12px Montserrat, sans-serif';
-  ctx.fillText(
-    'Status: BELUM ADA KODE DI BUKU 5 MASTER KOMODITAS (Diajukan oleh PCL / PML Lapangan beserta Prefix Kolom Kode Pengawas)',
-    28,
-    122
-  );
+    // Pure White A4 Landscape Sheet Background
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, width, pageHeight);
 
-  // Table Columns Definition
-  const cols = [
-    { title: 'NO', x: 18, w: 36 },
-    { title: 'STATUS KODE', x: 58, w: 125 },
-    { title: 'PREFIX KODE', x: 188, w: 96 },
-    { title: 'NAMA KOMODITAS DIAJUKAN', x: 290, w: 225 },
-    { title: 'SATUAN', x: 522, w: 78 },
-    { title: 'KUESIONER / SUBSEKTOR', x: 606, w: 175 },
-    { title: 'BLOK & RINCIAN KUESIONER', x: 788, w: 245 },
-    { title: 'PETUGAS & CATATAN', x: 1040, w: 205 },
-  ];
+    const rowsStartY = drawInstitutionalReportHeader(
+      ctx,
+      width,
+      totalItems,
+      unreviewedCount,
+      reviewedCount,
+      activeSectorFilter,
+      pIdx + 1,
+      pages.length,
+      nowStr
+    );
 
-  // Table Header
-  const thY = headerHeight;
-  ctx.fillStyle = '#0F172A';
-  ctx.fillRect(0, thY, width, tableHeaderHeight);
+    drawProposalRowsOnCanvas(ctx, width, rowsStartY, pageRows);
 
-  ctx.fillStyle = '#F8FAFC';
-  ctx.font = 'bold 11px Montserrat, sans-serif';
-  cols.forEach((c) => {
-    ctx.fillText(c.title, c.x, thY + 25);
+    drawInstitutionalReportFooter(
+      ctx,
+      width,
+      pageHeight - footerH,
+      footerH,
+      pIdx + 1,
+      pages.length
+    );
+
+    return canvas;
+  });
+}
+
+/**
+ * Renders a single continuous HD proportional PNG canvas (width 2800px at scale=2)
+ * with full multi-line text wrapping and zero distortion.
+ */
+function renderProposalsToPngCanvas(
+  items: ProposedCommodityItem[],
+  activeSectorFilter: ProposedSectorType | 'ALL'
+): HTMLCanvasElement {
+  const scale = 2;
+  const width = REPORT_LOGICAL_WIDTH;
+  const headerAndTableHeadH = 192;
+  const footerH = 48;
+
+  const measuredRows = measureProposalRows(items);
+  const rowsTotalH =
+    measuredRows.length === 0
+      ? 68
+      : measuredRows.reduce((acc, r) => acc + r.rowHeight, 0);
+
+  const totalHeight = headerAndTableHeadH + rowsTotalH + footerH;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = width * scale;
+  canvas.height = totalHeight * scale;
+  const ctx = canvas.getContext('2d')!;
+  ctx.scale(scale, scale);
+
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(0, 0, width, totalHeight);
+
+  const totalItems = items.length;
+  const reviewedCount = items.filter((i) => i.status === 'DITINJAU_PML').length;
+  const unreviewedCount = totalItems - reviewedCount;
+  const nowStr = new Date().toLocaleString('id-ID', {
+    dateStyle: 'long',
+    timeStyle: 'short',
   });
 
-  const truncate = (str: string, maxChars: number) =>
-    str.length > maxChars ? str.slice(0, maxChars - 1) + '…' : str;
+  const rowsStartY = drawInstitutionalReportHeader(
+    ctx,
+    width,
+    totalItems,
+    unreviewedCount,
+    reviewedCount,
+    activeSectorFilter,
+    1,
+    1,
+    nowStr
+  );
 
-  if (items.length === 0) {
-    const rY = thY + tableHeaderHeight;
-    ctx.fillStyle = '#64748B';
-    ctx.font = '500 13px Montserrat, sans-serif';
-    ctx.fillText('Belum ada komoditas yang diajukan pada filter kuesioner ini.', 28, rY + 28);
-  } else {
-    items.forEach((item, idx) => {
-      const rY = thY + tableHeaderHeight + idx * rowHeight;
-      ctx.fillStyle = idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC';
-      ctx.fillRect(0, rY, width, rowHeight);
+  drawProposalRowsOnCanvas(ctx, width, rowsStartY, measuredRows);
 
-      // Row bottom border
-      ctx.strokeStyle = '#E2E8F0';
-      ctx.beginPath();
-      ctx.moveTo(0, rY + rowHeight);
-      ctx.lineTo(width, rY + rowHeight);
-      ctx.stroke();
-
-      // 1. No
-      ctx.fillStyle = '#475569';
-      ctx.font = 'bold 12px "JetBrains Mono", monospace';
-      ctx.fillText(String(idx + 1).padStart(2, '0'), cols[0].x, rY + 28);
-
-      // 2. Status Badge
-      const isReviewed = item.status === 'DITINJAU_PML';
-      ctx.fillStyle = isReviewed ? '#FEF3C7' : '#FFE4E6';
-      ctx.fillRect(cols[1].x, rY + 13, 116, 22);
-      ctx.fillStyle = isReviewed ? '#92400E' : '#BE123C';
-      ctx.font = 'bold 10px "JetBrains Mono", monospace';
-      ctx.fillText(isReviewed ? 'DITINJAU PML' : 'BELUM ADA KODE', cols[1].x + 7, rY + 28);
-
-      // 3. Printed Prefix Badge
-      const prefixStr = getPrintedPrefixForProposal(item);
-      ctx.fillStyle = '#EFF6FF';
-      ctx.fillRect(cols[2].x, rY + 13, 84, 22);
-      ctx.fillStyle = '#003D7A';
-      ctx.font = 'bold 11px "JetBrains Mono", monospace';
-      ctx.fillText(truncate(prefixStr, 10), cols[2].x + 8, rY + 28);
-
-      // 4. Commodity Name
-      ctx.fillStyle = '#0F172A';
-      ctx.font = 'bold 12px Montserrat, sans-serif';
-      ctx.fillText(truncate(item.name, 28), cols[3].x, rY + 28);
-
-      // 5. Unit
-      ctx.fillStyle = '#003D7A';
-      ctx.font = 'bold 11px "JetBrains Mono", monospace';
-      ctx.fillText(truncate(item.unit, 10), cols[4].x, rY + 28);
-
-      // 6. Questionnaire / Sector
-      const secObj = SECTOR_OPTIONS.find((s) => s.id === item.sector);
-      ctx.fillStyle = '#334155';
-      ctx.font = '600 11px Montserrat, sans-serif';
-      ctx.fillText(
-        truncate(secObj ? `${secObj.questionnaire} (${secObj.codeRange})` : item.sector, 24),
-        cols[5].x,
-        rY + 28
-      );
-
-      // 7. Block & Group Label
-      ctx.fillStyle = '#0F172A';
-      ctx.font = '600 11px Montserrat, sans-serif';
-      ctx.fillText(
-        truncate(`[${item.groupCode}] ${item.groupLabel}`, 34),
-        cols[6].x,
-        rY + 28
-      );
-
-      // 8. Officer & Note
-      ctx.fillStyle = '#334155';
-      ctx.font = '600 11px Montserrat, sans-serif';
-      const officerText = `${item.officerCode} - ${item.officerName}`;
-      ctx.fillText(truncate(officerText, 27), cols[7].x, rY + 20);
-      ctx.fillStyle = '#64748B';
-      ctx.font = '500 10px Montserrat, sans-serif';
-      ctx.fillText(truncate(item.note || '-', 31), cols[7].x, rY + 36);
-    });
-  }
-
-  // Footer
-  const fY = height - footerHeight;
-  ctx.fillStyle = '#F1F5F9';
-  ctx.fillRect(0, fY, width, footerHeight);
-  ctx.fillStyle = '#64748B';
-  ctx.font = '600 11px Montserrat, sans-serif';
-  ctx.fillText(
-    'Portal Master Komoditas & Pemeriksaan PML SPDT NTP 2026 — Database Murni Buku 5 & Rekap Usulan Kode Komoditas 8 Kuesioner',
-    28,
-    fY + 30
+  drawInstitutionalReportFooter(
+    ctx,
+    width,
+    totalHeight - footerH,
+    footerH,
+    1,
+    1
   );
 
   return canvas;
 }
 
 /**
- * Generates a valid binary PDF 1.4 Blob containing the rendered high-DPI canvas image,
- * allowing direct 1-click `.pdf` file download without `window.open` popup blockers.
+ * Generates a valid multi-page binary PDF 1.4 Blob from an array of A4 Landscape HD canvases.
+ * Every page is placed onto an exact A4 Landscape MediaBox (842 x 595 pt) with 1:1 proportional
+ * aspect ratio (never stretched or squashed).
  */
-function generatePdfBlobFromCanvas(canvas: HTMLCanvasElement): Blob {
-  const jpegDataUrl = canvas.toDataURL('image/jpeg', 0.95);
-  const base64 = jpegDataUrl.split(',')[1];
-  const binaryImg = atob(base64);
-  const imgLength = binaryImg.length;
-
-  const imgW = canvas.width;
-  const imgH = canvas.height;
-
-  // Landscape A4 width = 842 pt, scale height proportionally
-  const pdfPageW = 842;
-  const pdfPageH = Math.max(595, Math.round((imgH / imgW) * pdfPageW));
+function generateMultiPagePdfBlobFromCanvases(canvases: HTMLCanvasElement[]): Blob {
+  const pdfPageW = 842; // A4 Landscape width in pt
+  const pdfPageH = 595; // A4 Landscape height in pt
 
   const encoder = new TextEncoder();
   const chunks: Uint8Array[] = [];
@@ -1064,43 +1578,70 @@ function generatePdfBlobFromCanvas(canvas: HTMLCanvasElement): Blob {
   offsets[1] = currentOffset;
   pushStr('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
 
-  // Object 2: Pages
-  offsets[2] = currentOffset;
-  pushStr('2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n');
-
-  // Object 3: Page
-  offsets[3] = currentOffset;
-  pushStr(
-    `3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pdfPageW} ${pdfPageH}] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>\nendobj\n`
-  );
-
-  // Object 4: Image XObject
-  offsets[4] = currentOffset;
-  pushStr(
-    `4 0 obj\n<< /Type /XObject /Subtype /Image /Width ${imgW} /Height ${imgH} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${imgLength} >>\nstream\n`
-  );
-  const imgBytes = new Uint8Array(imgLength);
-  for (let i = 0; i < imgLength; i++) {
-    imgBytes[i] = binaryImg.charCodeAt(i);
+  // Object 2: Pages (Kids will be objects 3, 6, 9, ... for each page)
+  const pageCount = canvases.length;
+  const pageObjIds: number[] = [];
+  for (let i = 0; i < pageCount; i++) {
+    pageObjIds.push(3 + i * 3);
   }
-  pushBytes(imgBytes);
-  pushStr('\nendstream\nendobj\n');
 
-  // Object 5: Content Stream
-  const contentStream = `q\n${pdfPageW} 0 0 ${pdfPageH} 0 0 cm\n/Im0 Do\nQ\n`;
-  offsets[5] = currentOffset;
+  offsets[2] = currentOffset;
   pushStr(
-    `5 0 obj\n<< /Length ${contentStream.length} >>\nstream\n${contentStream}endstream\nendobj\n`
+    `2 0 obj\n<< /Type /Pages /Kids [${pageObjIds.map((id) => `${id} 0 R`).join(' ')}] /Count ${pageCount} >>\nendobj\n`
   );
 
-  // XRef Table
+  canvases.forEach((canvas, idx) => {
+    const pageObjId = 3 + idx * 3;
+    const imgObjId = pageObjId + 1;
+    const contentObjId = pageObjId + 2;
+
+    const jpegDataUrl = canvas.toDataURL('image/jpeg', 0.95);
+    const base64 = jpegDataUrl.split(',')[1];
+    const binaryImg = atob(base64);
+    const imgLength = binaryImg.length;
+    const imgW = canvas.width;
+    const imgH = canvas.height;
+
+    // Page Object
+    offsets[pageObjId] = currentOffset;
+    pushStr(
+      `${pageObjId} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pdfPageW} ${pdfPageH}] /Resources << /XObject << /Im0 ${imgObjId} 0 R >> >> /Contents ${contentObjId} 0 R >>\nendobj\n`
+    );
+
+    // Image XObject
+    offsets[imgObjId] = currentOffset;
+    pushStr(
+      `${imgObjId} 0 obj\n<< /Type /XObject /Subtype /Image /Width ${imgW} /Height ${imgH} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${imgLength} >>\nstream\n`
+    );
+    const imgBytes = new Uint8Array(imgLength);
+    for (let i = 0; i < imgLength; i++) {
+      imgBytes[i] = binaryImg.charCodeAt(i);
+    }
+    pushBytes(imgBytes);
+    pushStr('\nendstream\nendobj\n');
+
+    // Proportional placement calculation (preserve exact aspect ratio inside 842 x 595 pt)
+    const scale = Math.min(pdfPageW / imgW, pdfPageH / imgH);
+    const drawW = Number((imgW * scale).toFixed(2));
+    const drawH = Number((imgH * scale).toFixed(2));
+    const offsetX = Number(((pdfPageW - drawW) / 2).toFixed(2));
+    const offsetY = Number((pdfPageH - drawH).toFixed(2));
+
+    const contentStream = `q\n${drawW} 0 0 ${drawH} ${offsetX} ${offsetY} cm\n/Im0 Do\nQ\n`;
+    offsets[contentObjId] = currentOffset;
+    pushStr(
+      `${contentObjId} 0 obj\n<< /Length ${contentStream.length} >>\nstream\n${contentStream}endstream\nendobj\n`
+    );
+  });
+
+  const totalObjects = 2 + pageCount * 3;
   const xrefOffset = currentOffset;
-  pushStr('xref\n0 6\n0000000000 65535 f \n');
-  for (let i = 1; i <= 5; i++) {
+  pushStr(`xref\n0 ${totalObjects + 1}\n0000000000 65535 f \n`);
+  for (let i = 1; i <= totalObjects; i++) {
     pushStr(`${String(offsets[i]).padStart(10, '0')} 00000 n \n`);
   }
   pushStr(
-    `trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`
+    `trailer\n<< /Size ${totalObjects + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`
   );
 
   return new Blob(chunks as unknown as BlobPart[], { type: 'application/pdf' });
@@ -1113,11 +1654,19 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
   initialDraftName,
   onClearDraftName,
   onAddProposal,
+  onUpdateProposal,
   onToggleStatus,
   onDeleteProposal,
   onCopyText,
   isFirebaseConnected,
 }) => {
+  const formRef = useRef<HTMLFormElement | null>(null);
+
+  // Edit & Delete Confirmation Modal State
+  const [editingProposal, setEditingProposal] = useState<ProposedCommodityItem | null>(null);
+  const [pendingDeleteItem, setPendingDeleteItem] = useState<ProposedCommodityItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   // Form State (Open to all officers without Admin login)
   const [name, setName] = useState(initialDraftName || '');
   const [unit, setUnit] = useState('KG');
@@ -1136,6 +1685,7 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
 
   useEffect(() => {
     if (initialDraftName) {
+      setEditingProposal(null);
       setName(initialDraftName);
       if (onClearDraftName) onClearDraftName();
     }
@@ -1148,21 +1698,76 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
 
   const availableGroups = useMemo(() => SECTOR_GROUP_MAP[sector] || [], [sector]);
 
-  useEffect(() => {
+  const handleSectorChange = (newSector: ProposedSectorType) => {
+    setSector(newSector);
     setSelectedGroupIdx(0);
-    const firstGroup = (SECTOR_GROUP_MAP[sector] || [])[0];
-    if (firstGroup && firstGroup.recommendedUnits.length > 0) {
+    const firstGroup = (SECTOR_GROUP_MAP[newSector] || [])[0];
+    if (firstGroup && firstGroup.recommendedUnits.length > 0 && !editingProposal) {
       setUnit(firstGroup.recommendedUnits[0]);
     }
-  }, [sector]);
+  };
 
   const currentGroup = availableGroups[selectedGroupIdx] || availableGroups[0];
 
   const handleSelectGroup = (idx: number) => {
     setSelectedGroupIdx(idx);
     const grp = availableGroups[idx];
-    if (grp && grp.recommendedUnits.length > 0) {
+    if (grp && grp.recommendedUnits.length > 0 && !editingProposal) {
       setUnit(grp.recommendedUnits[0]);
+    }
+  };
+
+  // Start Editing an Existing Proposal
+  const handleStartEdit = (item: ProposedCommodityItem) => {
+    setFormError(null);
+    setEditingProposal(item);
+    setSector(item.sector);
+
+    const groupsForSector = SECTOR_GROUP_MAP[item.sector] || [];
+    const foundIdx = groupsForSector.findIndex(
+      (g) =>
+        g.groupCode.toUpperCase() === item.groupCode.toUpperCase() ||
+        g.groupCode.replace(/\./g, '') === item.groupCode.replace(/\./g, '')
+    );
+    setSelectedGroupIdx(foundIdx >= 0 ? foundIdx : 0);
+
+    setName(item.name);
+    setUnit(item.unit);
+
+    const matchingOfficer = officers.find((o) => o.code === item.officerCode);
+    if (matchingOfficer) {
+      setSelectedOfficerCode(matchingOfficer.code);
+      setCustomOfficerName(matchingOfficer.name);
+    } else {
+      setSelectedOfficerCode('UMUM');
+      setCustomOfficerName(item.officerName || 'PETUGAS LAPANGAN');
+    }
+
+    setNote(stripAutoPrefixNote(item.note || ''));
+
+    if (formRef.current) {
+      formRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingProposal(null);
+    setFormError(null);
+    setName('');
+    setNote('');
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!pendingDeleteItem) return;
+    setIsDeleting(true);
+    try {
+      await onDeleteProposal(pendingDeleteItem.id);
+      if (editingProposal && editingProposal.id === pendingDeleteItem.id) {
+        handleCancelEdit();
+      }
+      setPendingDeleteItem(null);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -1178,7 +1783,7 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
     return counts;
   }, [proposals]);
 
-  // Live Buku 5 Duplicate / Similarity Checker (prioritizes items from the active questionnaire subsector)
+  // Live Buku 5 Duplicate / Similarity Checker
   const matchingBuku5Items = useMemo(() => {
     const q = name.trim().toLowerCase();
     if (q.length < 2) return [];
@@ -1241,13 +1846,14 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
       ? officerObj.name
       : customOfficerName.trim().toUpperCase() || 'PETUGAS LAPANGAN';
 
-    const noteWithPrefix = note.trim()
-      ? `[Prefix ${currentGroup.printedPrefix}] ${note.trim()}`
+    const cleanedUserNote = stripAutoPrefixNote(note);
+    const noteWithPrefix = cleanedUserNote
+      ? `[Prefix ${currentGroup.printedPrefix}] ${cleanedUserNote}`
       : `Prefix Kode Kuesioner ${currentSectorObj.questionnaire} (${currentGroup.blockName}): ${currentGroup.printedPrefix}`;
 
     setIsSubmitting(true);
     try {
-      await onAddProposal({
+      const payload: Omit<ProposedCommodityItem, 'id' | 'createdAtMs'> = {
         name: trimmedName.slice(0, 160),
         unit: trimmedUnit.slice(0, 40),
         sector,
@@ -1257,8 +1863,15 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
         officerCode: finalOfficerCode.slice(0, 16),
         officerName: finalOfficerName.slice(0, 120),
         note: noteWithPrefix.slice(0, 400),
-        status: 'BELUM_ADA_KODE',
-      });
+        status: editingProposal ? editingProposal.status : 'BELUM_ADA_KODE',
+      };
+
+      if (editingProposal) {
+        await onUpdateProposal(editingProposal.id, payload);
+        setEditingProposal(null);
+      } else {
+        await onAddProposal(payload);
+      }
       setName('');
       setNote('');
     } catch (err) {
@@ -1271,7 +1884,7 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
   };
 
   // ============================================================================
-  // EXPORT HANDLERS: CSV, PNG, PDF (Scoped to active questionnaire filter)
+  // EXPORT HANDLERS: CSV, PNG HD, PDF MULTI-PAGE A4 LANDSCAPE HD
   // ============================================================================
   const activeFilterSuffix = useMemo(() => {
     if (filterSector === 'ALL') return '8_kuesioner_spdt2026';
@@ -1316,7 +1929,7 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
         item.unit,
         item.officerCode,
         item.officerName,
-        item.note || '',
+        stripAutoPrefixNote(item.note || '') || item.note || '',
         dateStr,
       ]
         .map(escapeCsv)
@@ -1335,29 +1948,32 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
   };
 
   const handleExportPng = () => {
-    const canvas = renderProposalsToCanvas(filteredProposals, filterSector);
+    const canvas = renderProposalsToPngCanvas(filteredProposals, filterSector);
     canvas.toBlob((blob) => {
       if (!blob) return;
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `usulan_kode_komoditas_${activeFilterSuffix}.png`;
+      link.download = `usulan_kode_komoditas_${activeFilterSuffix}_HD.png`;
       link.click();
       URL.revokeObjectURL(url);
-      onCopyText('PNG Diunduh', `${filteredProposals.length} usulan komoditas diekspor ke PNG`);
+      onCopyText('PNG HD Diunduh', `${filteredProposals.length} usulan diekspor ke PNG HD Proporsional`);
     }, 'image/png');
   };
 
   const handleExportPdf = () => {
-    const canvas = renderProposalsToCanvas(filteredProposals, filterSector);
-    const pdfBlob = generatePdfBlobFromCanvas(canvas);
+    const canvases = renderProposalsToPaginatedPdfCanvases(filteredProposals, filterSector);
+    const pdfBlob = generateMultiPagePdfBlobFromCanvases(canvases);
     const url = URL.createObjectURL(pdfBlob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `usulan_kode_komoditas_${activeFilterSuffix}.pdf`;
+    link.download = `usulan_kode_komoditas_${activeFilterSuffix}_A4_HD.pdf`;
     link.click();
     URL.revokeObjectURL(url);
-    onCopyText('PDF Diunduh', `${filteredProposals.length} usulan komoditas diekspor ke PDF`);
+    onCopyText(
+      'PDF A4 HD Diunduh',
+      `${filteredProposals.length} usulan (${canvases.length} Halaman A4 Landscape HD)`
+    );
   };
 
   const activeFilterSectorObj = useMemo(
@@ -1394,16 +2010,15 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
               Pengajuan Komoditas Belum Berkode (SPDT26-K, TP, TH, TPR, TRK, IKT, IKB, HTN)
             </h1>
             <p className="mt-0.5 text-xs text-[#64748B] dark:text-[#94A3B8]">
-              Petugas PCL & PML dapat langsung mengajukan komoditas lapangan yang belum memiliki kode
-              di Buku 5 untuk <strong>ke-8 kuesioner subsektor</strong> tanpa perlu login Admin.
-              Setiap pilihan Blok otomatis menampilkan <strong>prefix cetakan kode kuesioner</strong>{' '}
-              (misal <code className="tabular-code font-bold">210....</code>,{' '}
-              <code className="tabular-code font-bold">3205...</code>,{' '}
-              <code className="tabular-code font-bold">6203...</code>) dan satuan baku blok terkait.
+              Petugas PCL & PML dapat langsung mengajukan maupun mengedit komoditas lapangan yang
+              belum memiliki kode di Buku 5 untuk <strong>ke-8 kuesioner subsektor</strong>. Hasil
+              ekspor <strong>PDF A4 Landscape Multi-Halaman HD</strong> & <strong>PNG HD</strong>{' '}
+              otomatis menampilkan teks penuh tanpa terpotong (<code className="font-bold">...</code>)
+              dan proporsional.
             </p>
           </div>
 
-          {/* 3 Export Buttons: CSV, PNG, PDF */}
+          {/* 3 Export Buttons: CSV, PNG HD, PDF A4 HD */}
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
@@ -1417,14 +2032,14 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
               onClick={handleExportPng}
               className="flex h-9 items-center gap-1.5 rounded-md border border-[#003D7A] bg-white px-3 text-xs font-bold whitespace-nowrap text-[#003D7A] transition hover:bg-[#EFF6FF] dark:border-[#38BDF8] dark:bg-[#0F172A] dark:text-[#38BDF8] dark:hover:bg-[#1E3A8A]/40"
             >
-              <span>Ekspor PNG ({filteredProposals.length})</span>
+              <span>Ekspor PNG HD ({filteredProposals.length})</span>
             </button>
             <button
               type="button"
               onClick={handleExportPdf}
               className="flex h-9 items-center gap-1.5 rounded-md bg-[#003D7A] px-3.5 text-xs font-bold whitespace-nowrap text-white transition hover:bg-[#002D5A] dark:bg-[#0284C7] dark:hover:bg-[#0369A1]"
             >
-              <span>Ekspor PDF ({filteredProposals.length})</span>
+              <span>Ekspor PDF A4 HD ({filteredProposals.length})</span>
             </button>
           </div>
         </div>
@@ -1432,24 +2047,60 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
 
       {/* Main 2-Column Split: Form on Left (5 cols), Real-Time Table on Right (7 cols) */}
       <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-12">
-        {/* LEFT COLUMN: Open Entry Form for All 8 Questionnaires */}
+        {/* LEFT COLUMN: Open Entry & Edit Form for All 8 Questionnaires */}
         <form
+          ref={formRef}
           onSubmit={handleSubmit}
-          className="rounded-lg border border-[#E2E8F0] bg-white p-4 sm:p-5 lg:col-span-5 dark:border-[#1E293B] dark:bg-[#111827]"
+          className={`rounded-lg border bg-white p-4 sm:p-5 lg:col-span-5 dark:bg-[#111827] ${
+            editingProposal
+              ? 'border-amber-500 ring-2 ring-amber-500/20 dark:border-amber-500'
+              : 'border-[#E2E8F0] dark:border-[#1E293B]'
+          }`}
         >
           <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-3 dark:border-[#1E293B]">
             <div>
               <h2 className="text-sm font-bold text-[#0F172A] dark:text-[#F8FAFC]">
-                Form Usulan Kode Komoditas per Kuesioner
+                {editingProposal
+                  ? 'Mode Edit Usulan Kode Komoditas'
+                  : 'Form Usulan Kode Komoditas per Kuesioner'}
               </h2>
               <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8]">
-                Terbuka untuk seluruh PCL & PML tanpa login pengelola
+                {editingProposal
+                  ? `Mengubah entrian: ${editingProposal.name}`
+                  : 'Terbuka untuk seluruh PCL & PML tanpa login pengelola'}
               </p>
             </div>
-            <span className="tabular-code rounded bg-rose-100 px-2 py-0.5 text-[10px] font-bold text-rose-800 dark:bg-rose-950/60 dark:text-rose-300">
-              {currentSectorObj.questionnaire}
+            <span
+              className={`tabular-code rounded px-2 py-0.5 text-[10px] font-bold ${
+                editingProposal
+                  ? 'bg-amber-100 text-amber-900 dark:bg-amber-950/70 dark:text-amber-300'
+                  : 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
+              }`}
+            >
+              {editingProposal ? 'MODE EDIT' : currentSectorObj.questionnaire}
             </span>
           </div>
+
+          {/* Active Edit Mode Banner */}
+          {editingProposal && (
+            <div className="mt-3 flex items-center justify-between gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs dark:border-amber-800 dark:bg-amber-950/40">
+              <div className="min-w-0">
+                <span className="font-bold text-amber-900 dark:text-amber-200">
+                  Sedang Mengedit:{' '}
+                </span>
+                <span className="font-extrabold text-[#0F172A] dark:text-white">
+                  {editingProposal.name}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                className="shrink-0 rounded border border-amber-400 bg-white px-2 py-0.5 text-[11px] font-bold text-amber-900 hover:bg-amber-100 dark:border-amber-700 dark:bg-[#0F172A] dark:text-amber-300"
+              >
+                Batal Edit
+              </button>
+            </div>
+          )}
 
           {formError && (
             <div className="mt-3 rounded-md border border-rose-300 bg-rose-50 p-2.5 text-xs font-semibold text-rose-800 dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-200">
@@ -1482,7 +2133,7 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
                     <button
                       key={s.id}
                       type="button"
-                      onClick={() => setSector(s.id)}
+                      onClick={() => handleSectorChange(s.id)}
                       className={`flex flex-col items-start rounded border px-2 py-1.5 text-left transition ${
                         isActive
                           ? 'border-[#003D7A] bg-[#003D7A] text-white dark:border-[#0284C7] dark:bg-[#0284C7]'
@@ -1502,7 +2153,7 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
 
               <select
                 value={sector}
-                onChange={(e) => setSector(e.target.value as ProposedSectorType)}
+                onChange={(e) => handleSectorChange(e.target.value as ProposedSectorType)}
                 className="mt-1.5 h-9 w-full rounded-md border border-[#CBD5E1] bg-white px-3 text-xs font-semibold text-[#0F172A] focus:border-[#003D7A] focus:outline-none dark:border-[#334155] dark:bg-[#0F172A] dark:text-[#F8FAFC]"
               >
                 {SECTOR_OPTIONS.map((s) => (
@@ -1733,15 +2384,32 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
               />
             </div>
 
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="flex h-10 w-full items-center justify-center rounded-md bg-[#003D7A] px-4 text-xs font-bold text-white transition hover:bg-[#002D5A] disabled:opacity-50 dark:bg-[#0284C7] dark:hover:bg-[#0369A1]"
-            >
-              {isSubmitting
-                ? 'Menyimpan Usulan Komoditas...'
-                : `+ Ajukan Komoditas ke ${currentSectorObj.questionnaire} (Prefix ${currentGroup?.printedPrefix || ''})`}
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className={`flex h-10 flex-1 items-center justify-center rounded-md px-4 text-xs font-bold text-white transition disabled:opacity-50 ${
+                  editingProposal
+                    ? 'bg-amber-600 hover:bg-amber-700 dark:bg-amber-600 dark:hover:bg-amber-500'
+                    : 'bg-[#003D7A] hover:bg-[#002D5A] dark:bg-[#0284C7] dark:hover:bg-[#0369A1]'
+                }`}
+              >
+                {isSubmitting
+                  ? 'Menyimpan...'
+                  : editingProposal
+                    ? `Simpan Perubahan Usulan (${currentSectorObj.questionnaire})`
+                    : `+ Ajukan Komoditas ke ${currentSectorObj.questionnaire} (Prefix ${currentGroup?.printedPrefix || ''})`}
+              </button>
+              {editingProposal && (
+                <button
+                  type="button"
+                  onClick={handleCancelEdit}
+                  className="h-10 rounded-md border border-[#CBD5E1] bg-[#F8FAFC] px-3.5 text-xs font-bold text-[#334155] hover:bg-[#E2E8F0] dark:border-[#334155] dark:bg-[#0F172A] dark:text-[#CBD5E1]"
+                >
+                  Batal
+                </button>
+              )}
+            </div>
           </div>
         </form>
 
@@ -1864,6 +2532,8 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
                   const secObj = SECTOR_OPTIONS.find((s) => s.id === item.sector);
                   const printedPrefix = getPrintedPrefixForProposal(item);
                   const isReviewed = item.status === 'DITINJAU_PML';
+                  const isCurrentlyEditing = editingProposal?.id === item.id;
+                  const cleanNote = stripAutoPrefixNote(item.note || '');
                   const dateStr = new Date(item.createdAtMs).toLocaleString('id-ID', {
                     day: '2-digit',
                     month: 'short',
@@ -1875,7 +2545,11 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
                   return (
                     <div
                       key={item.id}
-                      className="flex flex-col justify-between gap-3 p-4 transition hover:bg-[#F8FAFC] sm:flex-row sm:items-start dark:hover:bg-[#0F172A]/60"
+                      className={`flex flex-col justify-between gap-3 p-4 transition sm:flex-row sm:items-start ${
+                        isCurrentlyEditing
+                          ? 'bg-amber-50/70 dark:bg-amber-950/25'
+                          : 'hover:bg-[#F8FAFC] dark:hover:bg-[#0F172A]/60'
+                      }`}
                     >
                       <div className="min-w-0 flex-1">
                         {/* Top status, questionnaire & printed prefix row */}
@@ -1934,9 +2608,9 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
                         </div>
 
                         {/* Note if present */}
-                        {item.note && (
+                        {cleanNote && (
                           <p className="mt-1 text-xs text-[#64748B] dark:text-[#94A3B8]">
-                            Catatan: &ldquo;{item.note}&rdquo;
+                            Catatan: &ldquo;{cleanNote}&rdquo;
                           </p>
                         )}
 
@@ -1954,7 +2628,7 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
                         </div>
                       </div>
 
-                      {/* Action Buttons */}
+                      {/* Action Buttons: Status Toggle, Edit, Salin, Hapus (with Confirmation Modal) */}
                       <div className="flex shrink-0 flex-wrap items-center gap-1.5 sm:flex-col sm:items-end">
                         <button
                           type="button"
@@ -1963,7 +2637,18 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
                         >
                           {isReviewed ? 'Tandai Belum Ada Kode' : 'Tandai Ditinjau PML'}
                         </button>
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleStartEdit(item)}
+                            className={`h-7 rounded border px-2.5 text-[11px] font-bold transition ${
+                              isCurrentlyEditing
+                                ? 'border-amber-600 bg-amber-600 text-white'
+                                : 'border-[#003D7A]/40 bg-[#EFF6FF] text-[#003D7A] hover:bg-[#DBEAFE] dark:border-[#38BDF8]/40 dark:bg-[#1E3A8A]/30 dark:text-[#38BDF8]'
+                            }`}
+                          >
+                            {isCurrentlyEditing ? 'Sedang Diedit' : 'Edit'}
+                          </button>
                           <button
                             type="button"
                             onClick={() =>
@@ -1978,7 +2663,7 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
                           </button>
                           <button
                             type="button"
-                            onClick={() => onDeleteProposal(item.id)}
+                            onClick={() => setPendingDeleteItem(item)}
                             className="h-7 rounded border border-rose-200 bg-rose-50 px-2.5 text-[11px] font-semibold text-rose-700 hover:bg-rose-100 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300"
                           >
                             Hapus
@@ -1993,6 +2678,101 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
           )}
         </div>
       </div>
+
+      {/* Delete Confirmation Modal Window */}
+      {pendingDeleteItem && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-xs"
+          onClick={() => !isDeleting && setPendingDeleteItem(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-proposal-modal-title"
+        >
+          <div
+            className="w-full max-w-md rounded-lg border border-[#E2E8F0] bg-white p-5 shadow-xl dark:border-[#1E293B] dark:bg-[#111827]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3 border-b border-[#E2E8F0] pb-3 dark:border-[#1E293B]">
+              <div>
+                <span className="rounded bg-rose-100 px-2 py-0.5 text-[10px] font-extrabold text-rose-800 dark:bg-rose-950/80 dark:text-rose-300">
+                  KONFIRMASI HAPUS USULAN
+                </span>
+                <h3
+                  id="delete-proposal-modal-title"
+                  className="mt-1 text-base font-bold text-[#0F172A] dark:text-[#F8FAFC]"
+                >
+                  Hapus Entrian Usulan Kode Komoditas?
+                </h3>
+              </div>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setPendingDeleteItem(null)}
+                className="rounded px-2 py-1 text-xs font-semibold text-[#64748B] hover:bg-[#F1F5F9] hover:text-[#0F172A] dark:text-[#94A3B8] dark:hover:bg-[#1E293B]"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="mt-3.5 space-y-2 text-xs text-[#334155] dark:text-[#CBD5E1]">
+              <p>
+                Apakah Anda yakin ingin menghapus usulan komoditas berikut dari daftar pengajuan?
+              </p>
+              <div className="rounded-md border border-[#E2E8F0] bg-[#F8FAFC] p-3 dark:border-[#1E293B] dark:bg-[#0F172A]">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-sm font-extrabold text-[#0F172A] dark:text-white">
+                    {pendingDeleteItem.name}
+                  </span>
+                  <span className="tabular-code rounded bg-[#003D7A] px-2 py-0.5 text-[11px] font-bold text-white dark:bg-[#0284C7]">
+                    Satuan: {pendingDeleteItem.unit}
+                  </span>
+                </div>
+                <div className="mt-1.5 text-[11px] font-semibold text-[#475569] dark:text-[#94A3B8]">
+                  <div>
+                    Prefix Kode:{' '}
+                    <strong className="tabular-code text-[#003D7A] dark:text-[#38BDF8]">
+                      {getPrintedPrefixForProposal(pendingDeleteItem)}
+                    </strong>{' '}
+                    · Kuesioner:{' '}
+                    <strong>
+                      {SECTOR_OPTIONS.find((s) => s.id === pendingDeleteItem.sector)
+                        ?.questionnaire || pendingDeleteItem.sector}
+                    </strong>
+                  </div>
+                  <div className="mt-0.5">
+                    Blok/Rincian: [{pendingDeleteItem.groupCode}] {pendingDeleteItem.groupLabel}
+                  </div>
+                  <div className="mt-0.5">
+                    Pengaju: {pendingDeleteItem.officerCode} — {pendingDeleteItem.officerName}
+                  </div>
+                </div>
+              </div>
+              <p className="text-[11px] text-rose-700 dark:text-rose-400">
+                Tindakan ini akan menghapus usulan dari daftar bersama di seluruh perangkat.
+              </p>
+            </div>
+
+            <div className="mt-5 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setPendingDeleteItem(null)}
+                className="h-9 rounded-md border border-[#CBD5E1] bg-white px-4 text-xs font-bold text-[#334155] transition hover:bg-[#F8FAFC] dark:border-[#334155] dark:bg-[#0F172A] dark:text-[#CBD5E1]"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={handleConfirmDelete}
+                className="h-9 rounded-md bg-rose-600 px-4 text-xs font-bold text-white transition hover:bg-rose-700 disabled:opacity-50"
+              >
+                {isDeleting ? 'Menghapus...' : 'Ya, Hapus Usulan'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

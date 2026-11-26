@@ -755,6 +755,46 @@ export default function App() {
     }
   };
 
+  const handleUpdateProposal = async (
+    id: string,
+    updated: Omit<ProposedCommodityItem, 'id' | 'createdAtMs'>
+  ) => {
+    const cleanPayload = {
+      name: updated.name.trim().toUpperCase().slice(0, 160),
+      unit: updated.unit.trim().toUpperCase().slice(0, 40),
+      sector: updated.sector,
+      category: updated.category,
+      groupCode: updated.groupCode.trim().slice(0, 40),
+      groupLabel: updated.groupLabel.trim().slice(0, 160),
+      officerCode: updated.officerCode.trim().slice(0, 16),
+      officerName: updated.officerName.trim().slice(0, 120),
+      note: updated.note.trim().slice(0, 400),
+      status: updated.status,
+    };
+
+    setProposals((prev) => {
+      const next = prev.map((p) => (p.id === id ? { ...p, ...cleanPayload } : p));
+      try {
+        localStorage.setItem(STORAGE_KEYS.PROPOSALS_CACHE, JSON.stringify(next));
+      } catch {
+        // Ignore
+      }
+      return next;
+    });
+
+    try {
+      await updateDoc(doc(db, 'proposed_commodities', id), cleanPayload);
+      showToast(`Perubahan "${cleanPayload.name}" disimpan`);
+    } catch (error) {
+      showToast(`Perubahan disimpan lokal: "${cleanPayload.name}"`);
+      try {
+        handleFirestoreError(error, OperationType.UPDATE, `proposed_commodities/${id}`);
+      } catch {
+        // Error logged
+      }
+    }
+  };
+
   const handleDeleteProposal = async (id: string) => {
     setProposals((prev) => {
       const next = prev.filter((p) => p.id !== id);
@@ -1194,6 +1234,7 @@ export default function App() {
               initialDraftName={proposedDraftName}
               onClearDraftName={() => setProposedDraftName('')}
               onAddProposal={handleAddProposal}
+              onUpdateProposal={handleUpdateProposal}
               onToggleStatus={handleToggleProposalStatus}
               onDeleteProposal={handleDeleteProposal}
               onCopyText={handleCopyCode}
