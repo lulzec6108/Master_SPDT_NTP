@@ -996,7 +996,7 @@ export const Spdt26kCalculator: React.FC<Spdt26kCalculatorProps> = ({ onCopyText
                     Otomatis dijumlahkan dari 9 subkelompok makanan di atas
                   </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex w-full flex-wrap items-center justify-between gap-3 sm:w-auto sm:justify-end">
                   <input
                     type="text"
                     value={pcl7AWritten.sub01_1}
@@ -1004,7 +1004,7 @@ export const Spdt26kCalculator: React.FC<Spdt26kCalculatorProps> = ({ onCopyText
                       setPcl7AWritten((prev) => ({ ...prev, sub01_1: e.target.value }))
                     }
                     placeholder="Cek angka PCL (opsional)"
-                    className="tabular-code h-8 w-44 rounded border border-[#CBD5E1] bg-white px-2.5 text-xs font-semibold text-[#0F172A] dark:border-[#334155] dark:bg-[#111827] dark:text-[#F8FAFC]"
+                    className="tabular-code h-8 w-full rounded border border-[#CBD5E1] bg-white px-2.5 text-xs font-semibold text-[#0F172A] placeholder:text-[#94A3B8] focus:border-[#003D7A] focus:outline-none sm:w-44 dark:border-[#334155] dark:bg-[#111827] dark:text-[#F8FAFC] dark:placeholder:text-[#64748B] dark:focus:border-[#38BDF8]"
                   />
                   <span className="tabular-code text-base font-bold text-[#003D7A] dark:text-[#38BDF8]">
                     Rp {formatNum(blok7AComputed.sub01_1)}
@@ -1081,7 +1081,7 @@ export const Spdt26kCalculator: React.FC<Spdt26kCalculatorProps> = ({ onCopyText
                     Kolom (2)
                   </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex w-full flex-wrap items-center justify-between gap-3 sm:w-auto sm:justify-end">
                   <input
                     type="text"
                     value={pcl7AWritten.tot01}
@@ -1089,7 +1089,7 @@ export const Spdt26kCalculator: React.FC<Spdt26kCalculatorProps> = ({ onCopyText
                       setPcl7AWritten((prev) => ({ ...prev, tot01: e.target.value }))
                     }
                     placeholder="Angka tertulis PCL (01)"
-                    className="tabular-code h-8 w-44 rounded border border-[#CBD5E1] bg-white px-2.5 text-xs font-semibold text-[#0F172A] dark:border-[#334155] dark:bg-[#111827] dark:text-[#F8FAFC]"
+                    className="tabular-code h-8 w-full rounded border border-[#CBD5E1] bg-white px-2.5 text-xs font-semibold text-[#0F172A] placeholder:text-[#94A3B8] focus:border-[#003D7A] focus:outline-none sm:w-44 dark:border-[#334155] dark:bg-[#111827] dark:text-[#F8FAFC] dark:placeholder:text-[#64748B] dark:focus:border-[#38BDF8]"
                   />
                   <span className="tabular-code text-base font-bold text-[#003D7A] dark:text-[#38BDF8]">
                     Rp {formatNum(blok7AComputed.total01)}
@@ -1176,8 +1176,8 @@ export const Spdt26kCalculator: React.FC<Spdt26kCalculatorProps> = ({ onCopyText
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-3">
-                  <div>
+                <div className="flex w-full flex-wrap items-center justify-between gap-3 sm:w-auto sm:justify-end">
+                  <div className="w-full sm:w-auto">
                     <label className="block text-[11px] font-semibold text-[#64748B] dark:text-[#94A3B8]">
                       Jumlah A Tertulis PCL:
                     </label>
@@ -1188,7 +1188,7 @@ export const Spdt26kCalculator: React.FC<Spdt26kCalculatorProps> = ({ onCopyText
                         setPcl7AWritten((prev) => ({ ...prev, jumlahA: e.target.value }))
                       }
                       placeholder="Ketik Jumlah A PCL..."
-                      className="tabular-code mt-1 h-9 w-48 rounded-md border border-[#CBD5E1] bg-white px-3 text-xs font-bold text-[#0F172A] dark:border-[#334155] dark:bg-[#111827] dark:text-[#F8FAFC]"
+                      className="tabular-code mt-1 h-9 w-full rounded-md border border-[#CBD5E1] bg-white px-3 text-xs font-bold text-[#0F172A] placeholder:text-[#94A3B8] focus:border-[#003D7A] focus:outline-none sm:w-48 dark:border-[#334155] dark:bg-[#111827] dark:text-[#F8FAFC] dark:placeholder:text-[#64748B] dark:focus:border-[#38BDF8]"
                     />
                   </div>
 

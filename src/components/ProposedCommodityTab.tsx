@@ -1776,6 +1776,110 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
     return counts;
   }, [proposals]);
 
+  // Helper: Normalize commodity name for inter-user duplicate comparison
+  const normalizeCommodityName = (raw: string): string =>
+    raw
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  // Live Inter-User Duplicate / Similarity Checker across all 8 Questionnaires
+  const matchingExistingProposals = useMemo(() => {
+    const normInput = normalizeCommodityName(name);
+    if (normInput.length < 2) return [];
+    const inputTokens = normInput.split(' ').filter((t) => t.length >= 2);
+    if (inputTokens.length === 0) return [];
+
+    const results: {
+      item: ProposedCommodityItem;
+      isExactName: boolean;
+      isSameSector: boolean;
+      isExactSameSector: boolean;
+      score: number;
+    }[] = [];
+
+    proposals.forEach((p) => {
+      // Skip the proposal currently being edited
+      if (editingProposal && p.id === editingProposal.id) return;
+
+      const normProp = normalizeCommodityName(p.name);
+      if (!normProp) return;
+
+      const isExactName = normProp === normInput;
+      const isSameSector = p.sector === sector;
+      const isExactSameSector = isExactName && isSameSector;
+
+      const propTokens = normProp.split(' ').filter((t) => t.length >= 2);
+      const sharedTokens = inputTokens.filter((t) =>
+        propTokens.some((pt) => pt === t || (t.length >= 4 && (pt.includes(t) || t.includes(pt))))
+      );
+
+      const isSubstringMatch =
+        normInput.length >= 3 && (normProp.includes(normInput) || normInput.includes(normProp));
+      const allInputTokensInProp =
+        inputTokens.length > 0 && inputTokens.every((t) => normProp.includes(t));
+      const tokenOverlapRatio =
+        Math.max(inputTokens.length, propTokens.length) > 0
+          ? sharedTokens.length / Math.max(inputTokens.length, propTokens.length)
+          : 0;
+
+      if (isExactName || isSubstringMatch || allInputTokensInProp || tokenOverlapRatio >= 0.65) {
+        let score = 0;
+        if (isExactSameSector) score = 100;
+        else if (isSameSector && (isSubstringMatch || allInputTokensInProp)) score = 85;
+        else if (isExactName) score = 75;
+        else if (isSameSector) score = 65;
+        else if (allInputTokensInProp || isSubstringMatch) score = 50;
+        else score = 35;
+
+        results.push({
+          item: p,
+          isExactName,
+          isSameSector,
+          isExactSameSector,
+          score,
+        });
+      }
+    });
+
+    return results
+      .sort((a, b) => b.score - a.score || b.item.createdAtMs - a.item.createdAtMs)
+      .slice(0, 5);
+  }, [name, proposals, sector, editingProposal]);
+
+  // Exact same commodity name AND same questionnaire (blocks new duplicate submission)
+  const exactSameSectorProposal = useMemo(
+    () => matchingExistingProposals.find((m) => m.isExactSameSector)?.item || null,
+    [matchingExistingProposals]
+  );
+
+  // Map of duplicate counts across all existing proposals for table row badges
+  const proposalDuplicateInfoMap = useMemo(() => {
+    const byNameTotal: Record<string, number> = {};
+    const byNameAndSector: Record<string, number> = {};
+
+    proposals.forEach((p) => {
+      const norm = normalizeCommodityName(p.name);
+      if (!norm) return;
+      byNameTotal[norm] = (byNameTotal[norm] || 0) + 1;
+      const sectorKey = `${norm}__${p.sector}`;
+      byNameAndSector[sectorKey] = (byNameAndSector[sectorKey] || 0) + 1;
+    });
+
+    const infoMap: Record<string, { totalCount: number; sameSectorCount: number }> = {};
+    proposals.forEach((p) => {
+      const norm = normalizeCommodityName(p.name);
+      const sectorKey = `${norm}__${p.sector}`;
+      infoMap[p.id] = {
+        totalCount: byNameTotal[norm] || 1,
+        sameSectorCount: byNameAndSector[sectorKey] || 1,
+      };
+    });
+    return infoMap;
+  }, [proposals]);
+
   // Live Buku 5 Duplicate / Similarity Checker
   const matchingBuku5Items = useMemo(() => {
     const q = name.trim().toLowerCase();
@@ -1830,6 +1934,14 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
     }
     if (!trimmedUnit) {
       setFormError('Satuan komoditas wajib diisi.');
+      return;
+    }
+
+    // Hard block if exact same commodity name & same questionnaire already exists
+    if (exactSameSectorProposal) {
+      setFormError(
+        `Pengajuan dicegah: Komoditas "${exactSameSectorProposal.name}" sudah pernah diajukan pada kuesioner ${currentSectorObj.questionnaire} oleh ${exactSameSectorProposal.officerCode} (${exactSameSectorProposal.officerName}). Silakan klik tombol "Edit Usulan Ini" di bawah untuk memperbarui usulan yang sudah ada.`
+      );
       return;
     }
 
@@ -2236,10 +2348,136 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
                 required
                 maxLength={160}
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  if (formError) setFormError(null);
+                }}
                 placeholder="Contoh: DAUN KRATOM / PUPUK HAYATI CAIR / IKAN LOKAL..."
-                className="mt-1 h-9 w-full rounded-md border border-[#CBD5E1] bg-white px-3 text-xs font-semibold uppercase text-[#0F172A] placeholder:normal-case placeholder:text-[#94A3B8] focus:border-[#003D7A] focus:outline-none dark:border-[#334155] dark:bg-[#0F172A] dark:text-[#F8FAFC] dark:focus:border-[#38BDF8]"
+                className={`mt-1 h-9 w-full rounded-md border bg-white px-3 text-xs font-semibold uppercase text-[#0F172A] placeholder:normal-case placeholder:text-[#94A3B8] focus:outline-none dark:bg-[#0F172A] dark:text-[#F8FAFC] dark:placeholder:text-[#64748B] dark:focus:bg-[#0F172A] ${
+                  exactSameSectorProposal
+                    ? 'border-rose-500 focus:border-rose-600 dark:border-rose-500 dark:focus:border-rose-400'
+                    : 'border-[#CBD5E1] focus:border-[#003D7A] dark:border-[#334155] dark:focus:border-[#38BDF8]'
+                }`}
               />
+
+              {/* Live Inter-User Duplicate Proposal Warning (Checks all 8 Questionnaires + Highlights Same Questionnaire) */}
+              {matchingExistingProposals.length > 0 && (
+                <div
+                  className={`mt-2 rounded-md border p-3 text-xs ${
+                    exactSameSectorProposal
+                      ? 'border-rose-400 bg-rose-50 dark:border-rose-700 dark:bg-rose-950/50'
+                      : 'border-orange-300 bg-orange-50/90 dark:border-orange-800/80 dark:bg-orange-950/40'
+                  }`}
+                >
+                  <div
+                    className={`font-bold ${
+                      exactSameSectorProposal
+                        ? 'text-rose-900 dark:text-rose-200'
+                        : 'text-orange-950 dark:text-orange-200'
+                    }`}
+                  >
+                    {exactSameSectorProposal
+                      ? `⛔ Duplikat Terdeteksi: Komoditas "${exactSameSectorProposal.name}" SUDAH PERNAH DIAJUKAN di ${currentSectorObj.questionnaire}!`
+                      : `⚠ Indikasi Pengajuan Serupa Antar-Petugas (${matchingExistingProposals.length} usulan ditemukan di daftar pengajuan)`}
+                  </div>
+                  <p
+                    className={`mt-0.5 text-[11px] ${
+                      exactSameSectorProposal
+                        ? 'text-rose-800 dark:text-rose-300'
+                        : 'text-orange-900 dark:text-orange-300/90'
+                    }`}
+                  >
+                    {exactSameSectorProposal
+                      ? 'Sistem mencegah penyimpanan ganda untuk komoditas & kuesioner yang sama. Gunakan tombol "Edit Usulan Ini" di bawah untuk memperbarui entrian yang sudah ada:'
+                      : 'Periksa apakah komoditas yang akan Anda ajukan sudah pernah diajukan oleh petugas lain di bawah ini:'}
+                  </p>
+
+                  <div className="mt-2 space-y-1.5">
+                    {matchingExistingProposals.map((match) => {
+                      const p = match.item;
+                      const secObj = SECTOR_OPTIONS.find((s) => s.id === p.sector);
+                      const prefixStr = getPrintedPrefixForProposal(p);
+                      const dateStr = new Date(p.createdAtMs).toLocaleString('id-ID', {
+                        day: '2-digit',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      });
+
+                      return (
+                        <div
+                          key={p.id}
+                          className={`flex flex-col justify-between gap-2 rounded border bg-white px-2.5 py-2 sm:flex-row sm:items-center dark:bg-[#111827] ${
+                            match.isExactSameSector
+                              ? 'border-rose-400 ring-1 ring-rose-400/40 dark:border-rose-700'
+                              : match.isSameSector
+                                ? 'border-orange-300 dark:border-orange-800'
+                                : 'border-amber-200 dark:border-[#334155]'
+                          }`}
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              {match.isExactSameSector ? (
+                                <span className="rounded bg-rose-600 px-1.5 py-0.5 text-[9px] font-extrabold text-white">
+                                  SAMA PERSIS DI {secObj?.questionnaire || p.sector}
+                                </span>
+                              ) : match.isSameSector ? (
+                                <span className="rounded bg-orange-600 px-1.5 py-0.5 text-[9px] font-extrabold text-white">
+                                  KUESIONER SAMA ({secObj?.questionnaire || p.sector})
+                                </span>
+                              ) : match.isExactName ? (
+                                <span className="rounded bg-amber-500 px-1.5 py-0.5 text-[9px] font-extrabold text-slate-950">
+                                  SUDAH ADA DI {secObj?.questionnaire || p.sector}
+                                </span>
+                              ) : (
+                                <span className="rounded bg-slate-200 px-1.5 py-0.5 text-[9px] font-bold text-slate-800 dark:bg-slate-800 dark:text-slate-200">
+                                  MIRIP DI {secObj?.questionnaire || p.sector}
+                                </span>
+                              )}
+
+                              <span className="tabular-code rounded bg-[#EFF6FF] px-1.5 py-0.5 text-[10px] font-extrabold text-[#003D7A] dark:bg-[#1E3A8A]/50 dark:text-[#38BDF8]">
+                                Prefix {prefixStr}
+                              </span>
+
+                              <span className="font-extrabold text-[#0F172A] dark:text-[#F8FAFC]">
+                                {p.name}
+                              </span>
+
+                              <span className="tabular-code text-[10px] font-bold text-[#003D7A] dark:text-[#38BDF8]">
+                                ({p.unit})
+                              </span>
+                            </div>
+
+                            <div className="mt-0.5 text-[10px] font-medium text-[#475569] dark:text-[#94A3B8]">
+                              Blok: [{p.groupCode}] {p.groupLabel}
+                            </div>
+
+                            <div className="mt-0.5 text-[10px] text-[#64748B] dark:text-[#94A3B8]">
+                              Diajukan oleh:{' '}
+                              <strong className="text-[#0F172A] dark:text-[#E2E8F0]">
+                                {p.officerCode} — {p.officerName}
+                              </strong>{' '}
+                              · {dateStr}
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleStartEdit(p)}
+                            className={`shrink-0 rounded px-2.5 py-1.5 text-[10px] font-bold text-white transition ${
+                              match.isExactSameSector
+                                ? 'bg-rose-600 hover:bg-rose-700'
+                                : 'bg-amber-600 hover:bg-amber-700'
+                            }`}
+                          >
+                            Edit Usulan Ini
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Live Buku 5 Duplicate Warning */}
               {matchingBuku5Items.length > 0 && (
@@ -2307,7 +2545,7 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
                 value={unit}
                 onChange={(e) => setUnit(e.target.value)}
                 placeholder="Contoh: KG, IKAT, LITER, BATANG, M3, HOK..."
-                className="tabular-code mt-1 h-9 w-full rounded-md border border-[#CBD5E1] bg-white px-3 text-xs font-bold uppercase text-[#0F172A] focus:border-[#003D7A] focus:outline-none dark:border-[#334155] dark:bg-[#0F172A] dark:text-[#F8FAFC]"
+                className="tabular-code mt-1 h-9 w-full rounded-md border border-[#CBD5E1] bg-white px-3 text-xs font-bold uppercase text-[#0F172A] placeholder:text-[#94A3B8] focus:border-[#003D7A] focus:outline-none dark:border-[#334155] dark:bg-[#0F172A] dark:text-[#F8FAFC] dark:placeholder:text-[#64748B] dark:focus:border-[#38BDF8] dark:focus:bg-[#0F172A]"
               />
               <div className="mt-1.5 flex flex-wrap gap-1">
                 {unitButtons.all.map((u) => {
@@ -2341,7 +2579,7 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
               <select
                 value={selectedOfficerCode}
                 onChange={(e) => setSelectedOfficerCode(e.target.value)}
-                className="mt-1 h-9 w-full rounded-md border border-[#CBD5E1] bg-white px-3 text-xs font-semibold text-[#0F172A] focus:border-[#003D7A] focus:outline-none dark:border-[#334155] dark:bg-[#0F172A] dark:text-[#F8FAFC]"
+                className="mt-1 h-9 w-full rounded-md border border-[#CBD5E1] bg-white px-3 text-xs font-semibold text-[#0F172A] focus:border-[#003D7A] focus:outline-none dark:border-[#334155] dark:bg-[#0F172A] dark:text-[#F8FAFC] dark:focus:border-[#38BDF8] dark:focus:bg-[#0F172A]"
               >
                 <option value="UMUM">UMUM — Input Nama Petugas Manual</option>
                 {officers.map((o) => (
@@ -2357,7 +2595,7 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
                   value={customOfficerName}
                   onChange={(e) => setCustomOfficerName(e.target.value)}
                   placeholder="Ketik nama petugas pengaju..."
-                  className="mt-1.5 h-8 w-full rounded border border-[#CBD5E1] bg-white px-2.5 text-xs font-semibold uppercase text-[#0F172A] dark:border-[#334155] dark:bg-[#0F172A] dark:text-[#F8FAFC]"
+                  className="mt-1.5 h-8 w-full rounded border border-[#CBD5E1] bg-white px-2.5 text-xs font-semibold uppercase text-[#0F172A] placeholder:normal-case placeholder:text-[#94A3B8] focus:border-[#003D7A] focus:outline-none dark:border-[#334155] dark:bg-[#0F172A] dark:text-[#F8FAFC] dark:placeholder:text-[#64748B] dark:focus:border-[#38BDF8] dark:focus:bg-[#0F172A]"
                 />
               )}
             </div>
@@ -2373,26 +2611,36 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 placeholder={`Contoh: Ditemukan pada sampel ${currentSectorObj.questionnaire} ${currentGroup?.blockName || ''}, nama lokal daerah...`}
-                className="mt-1 w-full rounded-md border border-[#CBD5E1] bg-white p-2.5 text-xs font-medium text-[#0F172A] focus:border-[#003D7A] focus:outline-none dark:border-[#334155] dark:bg-[#0F172A] dark:text-[#F8FAFC]"
+                className="mt-1 w-full rounded-md border border-[#CBD5E1] bg-white p-2.5 text-xs font-medium text-[#0F172A] placeholder:text-[#94A3B8] focus:border-[#003D7A] focus:outline-none dark:border-[#334155] dark:bg-[#0F172A] dark:text-[#F8FAFC] dark:placeholder:text-[#64748B] dark:focus:border-[#38BDF8] dark:focus:bg-[#0F172A]"
               />
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className={`flex h-10 flex-1 items-center justify-center rounded-md px-4 text-xs font-bold text-white transition disabled:opacity-50 ${
-                  editingProposal
-                    ? 'bg-amber-600 hover:bg-amber-700 dark:bg-amber-600 dark:hover:bg-amber-500'
-                    : 'bg-[#003D7A] hover:bg-[#002D5A] dark:bg-[#0284C7] dark:hover:bg-[#0369A1]'
-                }`}
-              >
-                {isSubmitting
-                  ? 'Menyimpan...'
-                  : editingProposal
-                    ? `Simpan Perubahan Usulan (${currentSectorObj.questionnaire})`
-                    : `+ Ajukan Komoditas ke ${currentSectorObj.questionnaire} (Prefix ${currentGroup?.printedPrefix || ''})`}
-              </button>
+              {exactSameSectorProposal ? (
+                <button
+                  type="button"
+                  onClick={() => handleStartEdit(exactSameSectorProposal)}
+                  className="flex h-10 flex-1 items-center justify-center rounded-md bg-rose-600 px-4 text-xs font-bold text-white transition hover:bg-rose-700"
+                >
+                  ✎ Buka & Edit Usulan &ldquo;{exactSameSectorProposal.name}&rdquo; yang Sudah Ada
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className={`flex h-10 flex-1 items-center justify-center rounded-md px-4 text-xs font-bold text-white transition disabled:opacity-50 ${
+                    editingProposal
+                      ? 'bg-amber-600 hover:bg-amber-700 dark:bg-amber-600 dark:hover:bg-amber-500'
+                      : 'bg-[#003D7A] hover:bg-[#002D5A] dark:bg-[#0284C7] dark:hover:bg-[#0369A1]'
+                  }`}
+                >
+                  {isSubmitting
+                    ? 'Menyimpan...'
+                    : editingProposal
+                      ? `Simpan Perubahan Usulan (${currentSectorObj.questionnaire})`
+                      : `+ Ajukan Komoditas ke ${currentSectorObj.questionnaire} (Prefix ${currentGroup?.printedPrefix || ''})`}
+                </button>
+              )}
               {editingProposal && (
                 <button
                   type="button"
@@ -2446,7 +2694,7 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Cari nama komoditas usulan, prefix kode (misal 210, 3205, 6203), blok, atau nama petugas..."
-              className="h-9 w-full rounded-md border border-[#CBD5E1] bg-[#F8FAFC] px-3 text-xs font-medium text-[#0F172A] focus:border-[#003D7A] focus:bg-white focus:outline-none dark:border-[#334155] dark:bg-[#0F172A] dark:text-[#F8FAFC]"
+              className="h-9 w-full rounded-md border border-[#CBD5E1] bg-[#F8FAFC] px-3 text-xs font-medium text-[#0F172A] placeholder:text-[#94A3B8] focus:border-[#003D7A] focus:bg-white focus:outline-none dark:border-[#334155] dark:bg-[#0F172A] dark:text-[#F8FAFC] dark:placeholder:text-[#64748B] dark:focus:border-[#38BDF8] dark:focus:bg-[#0F172A]"
             />
 
             {/* Per-Questionnaire Filter Tabs (All 8 Questionnaires with counts) */}
@@ -2535,6 +2783,11 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
                     minute: '2-digit',
                   });
 
+                  const dupInfo = proposalDuplicateInfoMap[item.id];
+                  const hasSameSectorDup = dupInfo && dupInfo.sameSectorCount > 1;
+                  const hasCrossSectorDup =
+                    dupInfo && !hasSameSectorDup && dupInfo.totalCount > 1;
+
                   return (
                     <div
                       key={item.id}
@@ -2559,6 +2812,22 @@ export const ProposedCommodityTab: React.FC<ProposedCommodityTabProps> = ({
                           >
                             {isReviewed ? 'DITINJAU PML' : 'BELUM ADA KODE'}
                           </span>
+                          {hasSameSectorDup && (
+                            <span
+                              title="Komoditas ini terdeteksi diajukan lebih dari 1 kali pada kuesioner yang sama"
+                              className="rounded bg-rose-600 px-2 py-0.5 text-[10px] font-extrabold text-white"
+                            >
+                              ⚠ INDIKASI DUPLIKAT ({dupInfo.sameSectorCount}x DI KUESIONER INI)
+                            </span>
+                          )}
+                          {hasCrossSectorDup && (
+                            <span
+                              title="Nama komoditas ini juga diajukan pada kuesioner subsektor lain"
+                              className="rounded bg-amber-500 px-2 py-0.5 text-[10px] font-extrabold text-slate-950"
+                            >
+                              ⚠ DIAJUKAN DI {dupInfo.totalCount} KUESIONER
+                            </span>
+                          )}
                           <span
                             title="Prefix Kode Cetakan Kuesioner (Kolom Diisi Pengawas)"
                             className="tabular-code rounded border border-[#93C5FD] bg-[#EFF6FF] px-2 py-0.5 text-[11px] font-extrabold text-[#003D7A] dark:border-[#1E3A8A] dark:bg-[#1E3A8A]/40 dark:text-[#38BDF8]"

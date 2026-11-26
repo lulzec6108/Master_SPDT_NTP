@@ -11,6 +11,11 @@
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
   }
 
   body {
@@ -23,6 +28,50 @@
   html.dark body {
     background-color: #0B0F19;
     color: #F1F5F9;
+  }
+
+  /* Pastikan seluruh input, select, option, dan textarea selalu kontras di Mode Terang & Mode Gelap */
+  input,
+  select,
+  textarea {
+    color: #0F172A;
+  }
+
+  html.dark input,
+  html.dark select,
+  html.dark textarea {
+    color: #F8FAFC;
+    background-color: #0F172A;
+    border-color: #334155;
+  }
+
+  html.dark input:focus,
+  html.dark select:focus,
+  html.dark textarea:focus {
+    color: #F8FAFC;
+    background-color: #0F172A;
+  }
+
+  html.dark select option {
+    background-color: #0F172A;
+    color: #F8FAFC;
+  }
+
+  html.dark input::placeholder,
+  html.dark textarea::placeholder {
+    color: #64748B;
+  }
+
+  /* Cegah browser autofill mengubah latar input menjadi putih dengan teks putih di Mode Gelap */
+  html.dark input:-webkit-autofill,
+  html.dark input:-webkit-autofill:hover,
+  html.dark input:-webkit-autofill:focus,
+  html.dark textarea:-webkit-autofill,
+  html.dark select:-webkit-autofill {
+    -webkit-text-fill-color: #F8FAFC !important;
+    -webkit-box-shadow: 0 0 0px 1000px #0F172A inset !important;
+    transition: background-color 5000s ease-in-out 0s;
+    caret-color: #F8FAFC;
   }
 }
 

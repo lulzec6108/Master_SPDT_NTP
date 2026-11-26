@@ -277,7 +277,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="mt-1.5 h-10 w-full rounded-md border border-[#CBD5E1] bg-[#F8FAFC] px-3.5 text-sm font-medium text-[#0F172A] transition focus:border-[#003D7A] focus:bg-white focus:outline-none dark:border-[#334155] dark:bg-[#0F172A] dark:text-[#F8FAFC] dark:focus:border-[#38BDF8]"
+                  className="mt-1.5 h-10 w-full rounded-md border border-[#CBD5E1] bg-[#F8FAFC] px-3.5 text-sm font-medium text-[#0F172A] transition focus:border-[#003D7A] focus:bg-white focus:outline-none dark:border-[#334155] dark:bg-[#0F172A] dark:text-[#F8FAFC] dark:focus:border-[#38BDF8] dark:focus:bg-[#0F172A]"
                   autoComplete="off"
                   autoFocus
                   required
@@ -292,7 +292,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="mt-1.5 h-10 w-full rounded-md border border-[#CBD5E1] bg-[#F8FAFC] px-3.5 text-sm font-medium text-[#0F172A] transition focus:border-[#003D7A] focus:bg-white focus:outline-none dark:border-[#334155] dark:bg-[#0F172A] dark:text-[#F8FAFC] dark:focus:border-[#38BDF8]"
+                  className="mt-1.5 h-10 w-full rounded-md border border-[#CBD5E1] bg-[#F8FAFC] px-3.5 text-sm font-medium text-[#0F172A] transition focus:border-[#003D7A] focus:bg-white focus:outline-none dark:border-[#334155] dark:bg-[#0F172A] dark:text-[#F8FAFC] dark:focus:border-[#38BDF8] dark:focus:bg-[#0F172A]"
                   autoComplete="off"
                   required
                 />
