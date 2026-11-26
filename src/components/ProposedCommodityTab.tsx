@@ -1131,13 +1131,10 @@ function drawInstitutionalReportHeader(
     84
   );
 
-  // Right Summary Cards inside Header Banner
-  const cardW = 118;
+  // Right Summary Cards inside Header Banner (2 Cards: TOTAL USULAN & BELUM ADA KODE)
+  const cardW = 136;
   const cardH = 66;
-  const cardGap = 10;
-  const cardsStartX = width - 28 - (cardW * 3 + cardGap * 2);
-  const cardY = 23;
-
+  const cardGap = 12;
   const statCards = [
     {
       label: 'TOTAL USULAN',
@@ -1155,15 +1152,10 @@ function drawInstitutionalReportHeader(
       border: '#FDA4AF',
       valColor: '#FECDD3',
     },
-    {
-      label: 'DITINJAU PML',
-      value: `${reviewedCount}`,
-      sub: 'Terverifikasi',
-      bg: 'rgba(15, 23, 42, 0.55)',
-      border: '#FCD34D',
-      valColor: '#FDE68A',
-    },
   ];
+
+  const cardsStartX = width - 28 - (cardW * statCards.length + cardGap * (statCards.length - 1));
+  const cardY = 23;
 
   statCards.forEach((sc, i) => {
     const cxPos = cardsStartX + i * (cardW + cardGap);
@@ -1175,16 +1167,17 @@ function drawInstitutionalReportHeader(
     ctx.stroke();
 
     ctx.fillStyle = '#CBD5E1';
-    ctx.font = 'bold 9.5px "JetBrains Mono", monospace';
-    ctx.fillText(sc.label, cxPos + 12, cardY + 18);
+    ctx.font = 'bold 10px "JetBrains Mono", monospace';
+    ctx.fillText(sc.label, cxPos + 14, cardY + 19);
 
     ctx.fillStyle = sc.valColor;
-    ctx.font = 'bold 20px "JetBrains Mono", monospace';
-    ctx.fillText(sc.value, cxPos + 12, cardY + 42);
+    ctx.font = 'bold 21px "JetBrains Mono", monospace';
+    ctx.fillText(sc.value, cxPos + 14, cardY + 46);
+    const valWidth = ctx.measureText(sc.value).width;
 
-    ctx.fillStyle = '#94A3B8';
-    ctx.font = '600 10px "Plus Jakarta Sans", Montserrat, sans-serif';
-    ctx.fillText(sc.sub, cxPos + 12 + ctx.measureText(sc.value).width + 6, cardY + 41);
+    ctx.fillStyle = '#E2E8F0';
+    ctx.font = '600 11px "Plus Jakarta Sans", Montserrat, sans-serif';
+    ctx.fillText(sc.sub, cxPos + 14 + valWidth + 8, cardY + 45);
   });
 
   // Metadata Sub-bar below Navy Banner
